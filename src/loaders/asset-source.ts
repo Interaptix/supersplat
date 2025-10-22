@@ -7,16 +7,28 @@ interface AssetSource {
     mapFile?: (name: string) => AssetSource | null;             // function to map names to files
 }
 
-const fetchRequest = async (assetSource: AssetSource) : Promise<Response | File | null> => {
-    return await (assetSource.contents ?? fetch(assetSource.url || assetSource.filename)) as Response;
+const fetchRequest = async (assetSource: AssetSource): Promise<Response | File> => {
+    if (assetSource.contents) {
+        return assetSource.contents;
+    }
+    
+    const url = assetSource.url || assetSource.filename;
+    
+    try {
+        const response = await fetch(url);
+        return response;
+    } catch (error) {
+        // Network errors, CORS errors, etc.
+        throw new Error(`Network error: ${error.message || 'Failed to fetch resource'}`);
+    }
 };
 
-const fetchArrayBuffer = async (assetSource: AssetSource) : Promise<ArrayBuffer> | null => {
+const fetchArrayBuffer = async (assetSource: AssetSource): Promise<ArrayBuffer> => {
     const response = await fetchRequest(assetSource);
 
     if (response instanceof Response) {
         if (!response.ok) {
-            return null;
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         return await response.arrayBuffer();
     }
@@ -25,15 +37,15 @@ const fetchArrayBuffer = async (assetSource: AssetSource) : Promise<ArrayBuffer>
         return await response.arrayBuffer();
     }
 
-    return response;
+    throw new Error('Invalid response type');
 };
 
-const fetchText = async (assetSource: AssetSource) : Promise<string> | null => {
+const fetchText = async (assetSource: AssetSource): Promise<string> => {
     const response = await fetchRequest(assetSource);
 
     if (response instanceof Response) {
         if (!response.ok) {
-            return null;
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         return await response.text();
     }
@@ -42,7 +54,7 @@ const fetchText = async (assetSource: AssetSource) : Promise<string> | null => {
         return await response.text();
     }
 
-    return response;
+    throw new Error('Invalid response type');
 };
 
 export type { AssetSource };

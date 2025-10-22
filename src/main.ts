@@ -261,10 +261,19 @@ const main = async () => {
     // handle load params
     const loadList = url.searchParams.getAll('load');
     for (const value of loadList) {
-        const decoded = decodeURIComponent(value);
+        // URLSearchParams automatically decodes percent-encoded characters.
+        // We need to re-encode the pathname to preserve proper URL encoding
+        // (e.g., spaces as %20) which is required for fetch requests.
+        const urlObj = new URL(value);
+        const filename = urlObj.pathname.split('/').pop();
+        
+        // Re-encode each path segment to preserve proper URL encoding
+        const encodedPathname = urlObj.pathname.split('/').map(segment => encodeURIComponent(segment)).join('/');
+        const properlyEncodedUrl = `${urlObj.protocol}//${urlObj.host}${encodedPathname}${urlObj.search}`;
+        
         await events.invoke('import', [{
-            filename: decoded.split('/').pop(),
-            url: decoded
+            filename: filename,
+            url: properlyEncodedUrl
         }]);
     }
 

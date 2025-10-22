@@ -30,11 +30,16 @@
 
         <!-- Service worker -->
         <script>
-            const sw = navigator.serviceWorker;
-            if (sw) {
-                sw.register('./sw.js')
-                    .then(reg => console.log('service worker registered', reg))
-                    .catch(err => console.log('failed to register service worker', err));
+            const buildType = '__BUILD_TYPE__';
+            if (buildType !== 'debug') {
+                const sw = navigator.serviceWorker;
+                if (sw) {
+                    sw.register('./sw.js')
+                        .then(reg => console.log('service worker registered', reg))
+                        .catch(err => console.log('failed to register service worker', err));
+                }
+            } else {
+                console.log('Service worker disabled in debug mode');
             }
         </script>
     </head>
