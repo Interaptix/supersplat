@@ -11,9 +11,9 @@ const fetchRequest = async (assetSource: AssetSource): Promise<Response | File> 
     if (assetSource.contents) {
         return assetSource.contents;
     }
-    
+
     const url = assetSource.url || assetSource.filename;
-    
+
     try {
         const response = await fetch(url);
         return response;

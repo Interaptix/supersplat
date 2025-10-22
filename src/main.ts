@@ -266,11 +266,11 @@ const main = async () => {
         // (e.g., spaces as %20) which is required for fetch requests.
         const urlObj = new URL(value);
         const filename = urlObj.pathname.split('/').pop();
-        
+
         // Re-encode each path segment to preserve proper URL encoding
         const encodedPathname = urlObj.pathname.split('/').map(segment => encodeURIComponent(segment)).join('/');
         const properlyEncodedUrl = `${urlObj.protocol}//${urlObj.host}${encodedPathname}${urlObj.search}`;
-        
+
         await events.invoke('import', [{
             filename: filename,
             url: properlyEncodedUrl
