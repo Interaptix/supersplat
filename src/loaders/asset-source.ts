@@ -57,7 +57,7 @@ const fetchText = async (assetSource: AssetSource): Promise<string> => {
     }
 
     throw new Error('Invalid response type');
-}
+};
 
 // create a read source, optionally as a range request (on either URL or File)
 const createReadSource = async (assetSource: AssetSource, start?: number, end?: number) => {
