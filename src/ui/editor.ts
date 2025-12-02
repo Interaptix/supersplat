@@ -282,7 +282,7 @@ class EditorUI {
             return this.popup.show({
                 type: 'info',
                 header: 'About',
-                message: `SUPERSPLAT v${version}`
+                message: `SUPERSPLAT v${version}\nPR CD test change`
             });
         });
 
