@@ -6,6 +6,7 @@ import redoSvg from './svg/redo.svg';
 import brushSvg from './svg/select-brush.svg';
 import floodSvg from './svg/select-flood.svg';
 import lassoSvg from './svg/select-lasso.svg';
+import smartSelectSvg from './svg/select-smart.svg';
 import pickerSvg from './svg/select-picker.svg';
 import polygonSvg from './svg/select-poly.svg';
 import sphereSvg from './svg/select-sphere.svg';
@@ -61,6 +62,11 @@ class BottomToolbar extends Container {
 
         const flood = new Button({
             id: 'bottom-toolbar-flood',
+            class: 'bottom-toolbar-tool'
+        });
+
+        const smartSelect = new Button({
+            id: 'bottom-toolbar-smart-select',
             class: 'bottom-toolbar-tool'
         });
 
@@ -126,6 +132,7 @@ class BottomToolbar extends Container {
         polygon.dom.appendChild(createSvg(polygonSvg));
         brush.dom.appendChild(createSvg(brushSvg));
         flood.dom.appendChild(createSvg(floodSvg));
+        smartSelect.dom.appendChild(createSvg(smartSelectSvg));
         sphere.dom.appendChild(createSvg(sphereSvg));
         box.dom.appendChild(createSvg(boxSvg));
         lasso.dom.appendChild(createSvg(lassoSvg));
@@ -139,6 +146,7 @@ class BottomToolbar extends Container {
         this.append(polygon);
         this.append(brush);
         this.append(flood);
+        this.append(smartSelect);
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
         this.append(sphere);
         this.append(box);
@@ -158,6 +166,7 @@ class BottomToolbar extends Container {
         lasso.dom.addEventListener('click', () => events.fire('tool.lassoSelection'));
         brush.dom.addEventListener('click', () => events.fire('tool.brushSelection'));
         flood.dom.addEventListener('click', () => events.fire('tool.floodSelection'));
+        smartSelect.dom.addEventListener('click', () => events.fire('tool.samSelection'));
         picker.dom.addEventListener('click', () => events.fire('tool.rectSelection'));
         sphere.dom.addEventListener('click', () => events.fire('tool.sphereSelection'));
         box.dom.addEventListener('click', () => events.fire('tool.boxSelection'));
@@ -179,6 +188,7 @@ class BottomToolbar extends Container {
             picker.class[toolName === 'rectSelection' ? 'add' : 'remove']('active');
             brush.class[toolName === 'brushSelection' ? 'add' : 'remove']('active');
             flood.class[toolName === 'floodSelection' ? 'add' : 'remove']('active');
+            smartSelect.class[toolName === 'samSelection' ? 'add' : 'remove']('active');
             polygon.class[toolName === 'polygonSelection' ? 'add' : 'remove']('active');
             lasso.class[toolName === 'lassoSelection' ? 'add' : 'remove']('active');
             sphere.class[toolName === 'sphereSelection' ? 'add' : 'remove']('active');
@@ -205,6 +215,7 @@ class BottomToolbar extends Container {
         tooltips.register(polygon, localize('tooltip.bottom-toolbar.polygon'));
         tooltips.register(brush, localize('tooltip.bottom-toolbar.brush'));
         tooltips.register(flood, localize('tooltip.bottom-toolbar.flood'));
+        tooltips.register(smartSelect, localize('tooltip.bottom-toolbar.smart-select'));
         tooltips.register(sphere, localize('tooltip.bottom-toolbar.sphere'));
         tooltips.register(box, localize('tooltip.bottom-toolbar.box'));
         tooltips.register(translate, localize('tooltip.bottom-toolbar.translate'));
