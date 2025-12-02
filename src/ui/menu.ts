@@ -1,8 +1,9 @@
 import { Container, Element, Label } from '@playcanvas/pcui';
 
 import { Events } from '../events';
+import { recentFiles } from '../recent-files';
 import { localize } from './localization';
-import { MenuPanel } from './menu-panel';
+import { MenuPanel, MenuItem } from './menu-panel';
 import arrowSvg from './svg/arrow.svg';
 import collapseSvg from './svg/collapse.svg';
 import selectDelete from './svg/delete.svg';
@@ -26,6 +27,27 @@ const createSvg = (svgString: string) => {
     return new Element({
         dom: new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement
     });
+};
+
+const getOpenRecentItems = async (events: Events) => {
+    const files = await recentFiles.get();
+    const items: MenuItem[] = files.map((file) => {
+        return {
+            text: file.name,
+            onSelect: () => events.invoke('doc.openRecent', file.handle)
+        };
+    });
+
+    if (items.length > 0) {
+        items.push({}); // separator
+        items.push({
+            text: localize('menu.file.open-recent.clear'),
+            icon: createSvg(selectDelete),
+            onSelect: () => recentFiles.clear()
+        });
+    }
+
+    return items;
 };
 
 class Menu extends Container {
@@ -59,22 +81,22 @@ class Menu extends Container {
         });
 
         const scene = new Label({
-            text: localize('file'),
+            text: localize('menu.file'),
             class: 'menu-option'
         });
 
         const render = new Label({
-            text: localize('render'),
+            text: localize('menu.render'),
             class: 'menu-option'
         });
 
         const selection = new Label({
-            text: localize('select'),
+            text: localize('menu.select'),
             class: 'menu-option'
         });
 
         const help = new Label({
-            text: localize('help'),
+            text: localize('menu.help'),
             class: 'menu-option'
         });
 
@@ -111,169 +133,187 @@ class Menu extends Container {
         menubar.append(buttonsContainer);
 
         const exportMenuPanel = new MenuPanel([{
-            text: localize('file.export.ply'),
+            text: localize('menu.file.export.ply'),
             icon: createSvg(sceneExport),
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: () => events.invoke('scene.export', 'ply')
         }, {
-            text: localize('file.export.splat'),
+            text: localize('menu.file.export.splat'),
             icon: createSvg(sceneExport),
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: () => events.invoke('scene.export', 'splat')
         }, {
             // separator
         }, {
-            text: localize('file.export.viewer'),
+            text: localize('menu.file.export.viewer', { ellipsis: true }),
             icon: createSvg(sceneExport),
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: () => events.invoke('scene.export', 'viewer')
         }]);
 
+        const openRecentMenuPanel = new MenuPanel([]);
+
         const fileMenuPanel = new MenuPanel([{
-            text: localize('file.new'),
+            text: localize('menu.file.new'),
             icon: createSvg(sceneNew),
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: () => events.invoke('doc.new')
         }, {
-            text: localize('file.open'),
+            text: localize('menu.file.open'),
             icon: createSvg(sceneOpen),
             onSelect: async () => {
                 await events.invoke('doc.open');
             }
         }, {
+            text: localize('menu.file.open-recent'),
+            icon: createSvg(sceneOpen),
+            subMenu: openRecentMenuPanel,
+            isEnabled: async () => {
+                // refresh open recent menu items when the parent menu is opened
+                try {
+                    const items = await getOpenRecentItems(events);
+                    openRecentMenuPanel.setItems(items);
+                    return items.length > 0;
+                } catch (error) {
+                    console.error('Failed to load recent files:', error);
+                    return false;
+                }
+            }
+        }, {
             // separator
         }, {
-            text: localize('file.save'),
+            text: localize('menu.file.save'),
             icon: createSvg(sceneSave),
             isEnabled: () => events.invoke('doc.name'),
             onSelect: async () => await events.invoke('doc.save')
         }, {
-            text: localize('file.save-as'),
+            text: localize('menu.file.save-as', { ellipsis: true }),
             icon: createSvg(sceneSave),
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: async () => await events.invoke('doc.saveAs')
         }, {
             // separator
         }, {
-            text: localize('file.import'),
+            text: localize('menu.file.import', { ellipsis: true }),
             icon: createSvg(sceneImport),
             onSelect: async () => {
                 await events.invoke('scene.import');
             }
         }, {
-            text: localize('file.export'),
+            text: localize('menu.file.export'),
             icon: createSvg(sceneExport),
             subMenu: exportMenuPanel
         }, {
-            text: localize('file.publish'),
+            text: localize('menu.file.publish', { ellipsis: true }),
             icon: createSvg(scenePublish),
             isEnabled: () => !events.invoke('scene.empty'),
             onSelect: async () => await events.invoke('show.publishSettingsDialog')
         }]);
 
         const selectionMenuPanel = new MenuPanel([{
-            text: localize('select.all'),
+            text: localize('menu.select.all'),
             icon: createSvg(selectAll),
             extra: 'Ctrl + A',
             onSelect: () => events.fire('select.all')
         }, {
-            text: localize('select.none'),
+            text: localize('menu.select.none'),
             icon: createSvg(selectNone),
             extra: 'Shift + A',
             onSelect: () => events.fire('select.none')
         }, {
-            text: localize('select.invert'),
+            text: localize('menu.select.invert'),
             icon: createSvg(selectInverse),
             extra: 'Ctrl + I',
             onSelect: () => events.fire('select.invert')
         }, {
             // separator
         }, {
-            text: localize('select.lock'),
+            text: localize('menu.select.lock'),
             icon: createSvg(selectLock),
             extra: 'H',
             isEnabled: () => events.invoke('selection.splats'),
             onSelect: () => events.fire('select.hide')
         }, {
-            text: localize('select.unlock'),
+            text: localize('menu.select.unlock'),
             icon: createSvg(selectUnlock),
             extra: 'U',
             onSelect: () => events.fire('select.unhide')
         }, {
-            text: localize('select.delete'),
+            text: localize('menu.select.delete'),
             icon: createSvg(selectDelete),
             extra: 'Delete',
             isEnabled: () => events.invoke('selection.splats'),
             onSelect: () => events.fire('select.delete')
         }, {
-            text: localize('select.reset'),
+            text: localize('menu.select.reset'),
             onSelect: () => events.fire('scene.reset')
         }, {
             // separator
         }, {
-            text: localize('select.duplicate'),
+            text: localize('menu.select.duplicate'),
             icon: createSvg(selectDuplicate),
             isEnabled: () => events.invoke('selection.splats'),
             onSelect: () => events.fire('select.duplicate')
         }, {
-            text: localize('select.separate'),
+            text: localize('menu.select.separate'),
             icon: createSvg(selectSeparate),
             isEnabled: () => events.invoke('selection.splats'),
             onSelect: () => events.fire('select.separate')
         }]);
 
         const renderMenuPanel = new MenuPanel([{
-            text: localize('render.image'),
+            text: localize('menu.render.image', { ellipsis: true }),
             icon: createSvg(sceneExport),
             onSelect: async () => await events.invoke('show.imageSettingsDialog')
         }, {
-            text: localize('render.video'),
+            text: localize('menu.render.video', { ellipsis: true }),
             icon: createSvg(sceneExport),
             onSelect: async () => await events.invoke('show.videoSettingsDialog')
         }]);
 
         const helpMenuPanel = new MenuPanel([{
-            text: localize('help.shortcuts'),
+            text: localize('menu.help.shortcuts'),
             icon: 'E136',
             onSelect: () => events.fire('show.shortcuts')
         }, {
-            text: localize('help.user-guide'),
+            text: localize('menu.help.user-guide'),
             icon: 'E232',
             onSelect: () => window.open('https://developer.playcanvas.com/user-manual/gaussian-splatting/editing/supersplat/', '_blank').focus()
         }, {
-            text: localize('help.log-issue'),
+            text: localize('menu.help.log-issue'),
             icon: 'E336',
             onSelect: () => window.open('https://github.com/playcanvas/supersplat/issues', '_blank').focus()
         }, {
-            text: localize('help.github-repo'),
+            text: localize('menu.help.github-repo'),
             icon: 'E259',
             onSelect: () => window.open('https://github.com/playcanvas/supersplat', '_blank').focus()
         }, {
             // separator
         }, {
-            text: localize('help.basics-video'),
+            text: localize('menu.help.basics-video'),
             icon: 'E261',
             onSelect: () => window.open('https://youtu.be/MwzaEM2I55I', '_blank').focus()
         }, {
             // separator
         }, {
-            text: localize('help.discord'),
+            text: localize('menu.help.discord'),
             icon: 'E233',
             onSelect: () => window.open('https://discord.gg/T3pnhRTTAY', '_blank').focus()
         }, {
-            text: localize('help.forum'),
+            text: localize('menu.help.forum'),
             icon: 'E432',
             onSelect: () => window.open('https://forum.playcanvas.com', '_blank').focus()
         }, {
             // separator
         }, {
-            text: localize('help.about'),
+            text: localize('menu.help.about'),
             icon: 'E138',
             onSelect: () => events.invoke('show.about')
         }]);
 
         this.append(menubar);
         this.append(fileMenuPanel);
+        this.append(openRecentMenuPanel);
         this.append(exportMenuPanel);
         this.append(selectionMenuPanel);
         this.append(renderMenuPanel);

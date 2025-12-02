@@ -138,7 +138,6 @@ void main(void) {
             // selected
             color.xyz = mix(color.xyz, selectedClr.xyz * 0.8, selectedClr.a);
         }
-    
     #endif
 }
 `;
