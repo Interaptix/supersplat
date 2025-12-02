@@ -1,4 +1,4 @@
-# SuperSplat - 3D Gaussian Splat Editor
+# SuperSplat Editor
 
 [![Github Release](https://img.shields.io/github/v/release/playcanvas/supersplat)](https://github.com/playcanvas/supersplat/releases)
 [![License](https://img.shields.io/github/license/playcanvas/supersplat)](https://github.com/playcanvas/supersplat/blob/main/LICENSE)
@@ -8,7 +8,7 @@
 
 | [SuperSplat Editor](https://superspl.at/editor) | [User Guide](https://developer.playcanvas.com/user-manual/gaussian-splatting/editing/supersplat/) | [Blog](https://blog.playcanvas.com) | [Forum](https://forum.playcanvas.com) |
 
-SuperSplat is a free and open source tool for inspecting, editing, optimizing and publishing 3D Gaussian Splats. It is built on web technologies and runs in the browser, so there's nothing to download or install.
+The SuperSplat Editor is a free and open source tool for inspecting, editing, optimizing and publishing 3D Gaussian Splats. It is built on web technologies and runs in the browser, so there's nothing to download or install.
 
 A live version of this tool is available at: https://superspl.at/editor
 
@@ -49,6 +49,38 @@ To initialize a local development environment for SuperSplat, ensure you have [N
 5. Navigate to `http://localhost:3000`
 
 When changes to the source are detected, SuperSplat is rebuilt automatically. Simply refresh your browser to see your changes.
+
+## Localizing the SuperSplat Editor
+
+The currently supported languages are available here:
+
+https://github.com/playcanvas/supersplat/tree/main/static/locales
+
+### Adding a New Language
+
+1. Add a new `<locale>.json` file in the `static/locales` directory.
+
+2. Add the locale to the list here:
+
+   https://github.com/playcanvas/supersplat/blob/main/src/ui/localization.ts
+
+### Testing Translations
+
+To test your translations:
+
+1. Run the development server:
+
+   ```sh
+   npm run develop
+   ```
+
+2. Open your browser and navigate to:
+
+   ```
+   http://localhost:3000/?lng=<locale>
+   ```
+
+   Replace `<locale>` with your language code (e.g., `fr`, `de`, `es`).
 
 ## Contributors
 
