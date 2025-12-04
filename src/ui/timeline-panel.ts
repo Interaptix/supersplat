@@ -101,7 +101,10 @@ class Ticks extends Container {
                 keys.push(label);
             };
 
-            (events.invoke('timeline.keys') as number[]).forEach(createKey);
+            const keys_initial = events.invoke('timeline.keys') as number[] | undefined;
+            if (keys_initial) {
+                keys_initial.forEach(createKey);
+            }
 
             addKey = (value: number) => {
                 createKey(value);

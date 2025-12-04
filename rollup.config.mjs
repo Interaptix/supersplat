@@ -118,7 +118,24 @@ const serviceWorker = {
     cache: false
 };
 
+const sam2Worker = {
+    input: 'src/segmentation/webgpu/sam2-worker.ts',
+    output: {
+        file: 'dist/sam2-worker.js',
+        format: 'esm',
+        sourcemap: true
+    },
+    plugins: [
+        resolve(),
+        json(),
+        typescript()
+    ],
+    treeshake: 'smallest',
+    cache: false
+};
+
 export default [
     application,
-    serviceWorker
+    serviceWorker,
+    sam2Worker
 ];

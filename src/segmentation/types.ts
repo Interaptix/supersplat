@@ -56,6 +56,25 @@ export interface SegmentationRequest {
 }
 
 /**
+ * Individual mask candidate from SAM2 decoder.
+ * SAM2 outputs 3 masks with different granularity levels.
+ */
+export interface MaskCandidate {
+    /** Mask index (0=tight, 1=medium, 2=broad) */
+    index: number;
+    /** IoU confidence score */
+    iouScore: number;
+    /** Binary mask (H*W bytes, 0=background, 255=foreground) */
+    mask: Uint8Array;
+    /** Mask width in pixels */
+    width: number;
+    /** Mask height in pixels */
+    height: number;
+    /** Raw logits for this mask (256x256) */
+    logits: Float32Array;
+}
+
+/**
  * Response from segmentation service.
  */
 export interface SegmentationResponse {
@@ -63,10 +82,14 @@ export interface SegmentationResponse {
     width: number;
     /** Mask height in pixels */
     height: number;
-    /** Binary mask (H*W bytes, 0=background, 255=foreground) */
+    /** Binary mask (H*W bytes, 0=background, 255=foreground) - the selected mask */
     mask: Uint8Array;
     /** Optional soft mask/logits for client-side thresholding */
     logits?: Float32Array;
+    /** All mask candidates with IoU scores (for multi-mask selection UI) */
+    allMasks?: MaskCandidate[];
+    /** Index of the currently selected mask */
+    selectedMaskIndex?: number;
 }
 
 /**

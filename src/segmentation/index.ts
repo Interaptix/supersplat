@@ -5,6 +5,7 @@ export type {
     SegmentationOptions,
     SegmentationRequest,
     SegmentationResponse,
+    MaskCandidate,
     SelectionOp
 } from './types';
 
@@ -18,3 +19,23 @@ export {
     createMaskPreviewCanvas
 } from './mask-selection';
 export type { MaskSelectionOptions } from './mask-selection';
+
+// WebGPU provider
+export {
+    WebGPUProvider,
+    createWebGPUProvider,
+    checkWebGPUCapabilities,
+    areModelsCached,
+    clearModelCache,
+    LOW_VRAM_THRESHOLD,
+    formatBytes,
+    getTotalModelSize,
+    SAM2_MODELS
+} from './webgpu';
+export type {
+    WebGPUCapabilities,
+    ProviderState,
+    ModelLoadProgressCallback,
+    ProgressCallback,
+    WebGPUProviderOptions
+} from './webgpu';

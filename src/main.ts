@@ -30,7 +30,9 @@ import { ToolManager } from './tools/tool-manager';
 import { registerTransformHandlerEvents } from './transform-handler';
 import { EditorUI } from './ui/editor';
 import { localizeInit } from './ui/localization';
+import { SamMaskOverlay } from './ui/sam-mask-overlay';
 import { SamPanel } from './ui/sam-panel';
+import { registerSegmentationEvents } from './segmentation/segmentation-service';
 
 declare global {
     interface LaunchParams {
@@ -250,6 +252,9 @@ const main = async () => {
     const samPanel = new SamPanel(events);
     editorUI.appContainer.append(samPanel);
 
+    // create SAM mask overlay for preview visualization
+    const samMaskOverlay = new SamMaskOverlay(events, editorUI.toolsContainer.dom);
+
     editorUI.toolsContainer.dom.appendChild(maskCanvas);
 
     window.scene = scene;
@@ -265,6 +270,9 @@ const main = async () => {
     registerRenderEvents(scene, events);
     initShortcuts(events);
     initFileHandler(scene, events, editorUI.appContainer.dom);
+
+    // Register segmentation service for SAM tool
+    registerSegmentationEvents(events, editorUI.canvas);
 
     // load async models
     scene.start();

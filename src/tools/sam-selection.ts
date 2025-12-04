@@ -99,7 +99,7 @@ class SamSelection {
         };
 
         /**
-         * Handle pointer down - add a point
+         * Handle pointer down - add a point and trigger immediate segmentation
          */
         const pointerdown = (e: PointerEvent) => {
             // Only handle primary button (left click) or right click
@@ -121,6 +121,9 @@ class SamSelection {
 
             points.push(newPoint);
             paint();
+
+            // Trigger immediate segmentation like the original SAM2 repo
+            events.fire('sam.segment', [...points]);
         };
 
         /**
@@ -163,6 +166,10 @@ class SamSelection {
 
             // Notify that SAM tool is active
             events.fire('sam.activated');
+
+            // Immediately capture viewport preview when tool opens
+            // This shows the current view in the panel before any clicks
+            events.fire('sam.capturePreview');
         };
 
         this.deactivate = () => {
