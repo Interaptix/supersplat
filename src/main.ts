@@ -23,12 +23,16 @@ import { MoveTool } from './tools/move-tool';
 import { PolygonSelection } from './tools/polygon-selection';
 import { RectSelection } from './tools/rect-selection';
 import { RotateTool } from './tools/rotate-tool';
+import { SamSelection } from './tools/sam-selection';
 import { ScaleTool } from './tools/scale-tool';
 import { SphereSelection } from './tools/sphere-selection';
 import { ToolManager } from './tools/tool-manager';
 import { registerTransformHandlerEvents } from './transform-handler';
 import { EditorUI } from './ui/editor';
 import { localizeInit } from './ui/localization';
+import { SamMaskOverlay } from './ui/sam-mask-overlay';
+import { SamPanel } from './ui/sam-panel';
+import { registerSegmentationEvents } from './segmentation/segmentation-service';
 
 declare global {
     interface LaunchParams {
@@ -242,6 +246,14 @@ const main = async () => {
     toolManager.register('rotate', new RotateTool(events, scene));
     toolManager.register('scale', new ScaleTool(events, scene));
     toolManager.register('measure', new MeasureTool(events, scene, editorUI.toolsContainer.dom, editorUI.canvasContainer));
+    toolManager.register('samSelection', new SamSelection(events, editorUI.toolsContainer.dom));
+
+    // create SAM panel for point picking UI
+    const samPanel = new SamPanel(events);
+    editorUI.appContainer.append(samPanel);
+
+    // create SAM mask overlay for preview visualization
+    const samMaskOverlay = new SamMaskOverlay(events, editorUI.toolsContainer.dom);
 
     editorUI.toolsContainer.dom.appendChild(maskCanvas);
 
@@ -258,6 +270,9 @@ const main = async () => {
     registerRenderEvents(scene, events);
     initShortcuts(events);
     initFileHandler(scene, events, editorUI.appContainer.dom);
+
+    // Register segmentation service for SAM tool
+    registerSegmentationEvents(events, editorUI.canvas);
 
     // load async models
     scene.start();

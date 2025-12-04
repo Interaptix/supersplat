@@ -207,6 +207,7 @@
     "tooltip.bottom-toolbar.polygon": "Polygon Select ( P )",
     "tooltip.bottom-toolbar.brush": "Brush Select ( B )",
     "tooltip.bottom-toolbar.flood": "Flood Select ( O )",
+    "tooltip.bottom-toolbar.smart-select": "Smart Select (AI)",
     "tooltip.bottom-toolbar.sphere": "Sphere Select",
     "tooltip.bottom-toolbar.box": "Box Select",
     "tooltip.bottom-toolbar.translate": "Translate ( 1 )",

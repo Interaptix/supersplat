@@ -1,0 +1,56 @@
+# In-Browser SAM2 (WebGPU) Plan
+
+## Goal
+Run SAM2 entirely in the browser to avoid backend calls, reduce latency, and keep data local. Keep current backend path as a fallback.
+
+## Approach
+- Use ONNX Runtime Web with the WebGPU execution provider.
+- Load a SAM2 ONNX checkpoint (prefer smaller/quantized “B” variant) from `static/` or a CDN.
+- Do all inference in a Web Worker to keep the UI responsive; main thread only sends prompts and receives masks.
+- WebGPU-first; CPU/WASM fallback when WebGPU is unavailable (performance will be much slower).
+
+## Requirements
+- Browser: Chrome/Edge desktop with WebGPU; Safari/iOS will likely fall back to WASM.
+- Hardware: Discrete GPU preferred; integrated GPUs may be slower.
+- Assets: ONNX model file(s) (hundreds of MB) plus tokenizer/config; consider chunked download with progress UI.
+- Runtime deps: `onnxruntime-web` (WebGPU build) bundled in app.
+
+## Architecture
+- Loader: fetch model(s) from `static/models/sam2/` (or CDN), stream if possible, cache in IndexedDB if allowed.
+- Worker: initialize ORT WebGPU session once; expose `init`, `predict` messages.
+- Main thread: existing SAM panel sends image embeddings/prompts to worker; receives masks/logits to render.
+- Fallback: if WebGPU init fails, switch to WASM/CPU EP with a clear warning and throttled UX.
+
+## UX Flow
+1. On first use, show “Enable in-browser SAM2 (WebGPU)” with expected download size and GPU requirement.
+2. Show download/progress; allow cancel.
+3. After init, prompts run locally; display latency per click.
+4. If fallback engages, surface “Running in slow CPU mode” and suggest supported browsers/GPUs.
+
+## Implementation Steps
+- Add `onnxruntime-web` (webgpu build) dependency.
+- Add worker module to load/init model and handle `predict` messages.
+- Wire the SAM UI panel to route prompts/masks through the worker.
+- Add model hosting path (`static/models/sam2/*`) and checksum/versioning.
+- Add capability detection (WebGPU) and fallback selection logic.
+- Add basic telemetry hooks (init time, first inference, avg latency) for evaluation.
+
+## Performance Targets (initial)
+- Model load/init: <15s on a modern dGPU; acceptable up to ~30s with clear progress.
+- First inference: <1s on dGPU; <3s on good iGPU.
+- Steady clicks: <500ms on dGPU; <1.5s on iGPU. Flag anything slower as “degraded”.
+
+## Risks / Mitigations
+- Large downloads: use progress UI; allow CDN; cache in IndexedDB when possible.
+- VRAM/DRAM pressure: start with smaller/quantized model; document minimum GPU RAM.
+- Browser support gaps: keep backend path; gate feature behind capability check.
+- WASM fallback too slow: warn and allow user to switch back to backend.
+
+## Validation Plan
+- Test on dGPU (WebGPU), iGPU (WebGPU), and CPU-only (fallback).
+- Measure: download size/time, init time, first inference, steady-state latency, memory footprint.
+- Compare mask quality vs backend to confirm parity.
+
+## Rollout
+- Behind a feature toggle (per-user setting).
+- Keep backend as default until metrics are acceptable; then flip default for supported browsers/GPUs.

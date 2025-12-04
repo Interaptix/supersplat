@@ -5,6 +5,7 @@
         "moduleResolution": "bundler",
 
         "lib": ["es2022", "dom", "WebWorker"],
+        "types": ["@webgpu/types"],
         "sourceMap": true,
         "noImplicitAny": true,
         "inlineSources": true,
