@@ -606,6 +606,19 @@ class SamPanel extends Container {
                 }
             }, 5000);
         });
+
+        // Handle pre-encoding events (encoding happens automatically when panel opens)
+        this.events.on('sam.encodingStart', () => {
+            this.showEncodingState();
+        });
+
+        this.events.on('sam.encodingComplete', (data: { encodeTime: number }) => {
+            this.showEncodingComplete(data.encodeTime);
+        });
+
+        this.events.on('sam.encodingError', (error: string) => {
+            this.showError(`Encoding failed: ${error}`);
+        });
     }
 
     /**
@@ -1186,6 +1199,33 @@ class SamPanel extends Container {
     }
 
     /**
+     * Show encoding state - indicates that image encoding is in progress
+     */
+    private showEncodingState(): void {
+        this.processingIndicator.text = 'Encoding image...';
+        this.processingIndicator.hidden = false;
+        this.instructions.text = 'Encoding image for segmentation...';
+        // Disable clicks during encoding
+        this.imagePreviewCanvas.style.pointerEvents = 'none';
+        this.imagePreviewCanvas.style.cursor = 'wait';
+    }
+
+    /**
+     * Show encoding complete - indicates ready for segmentation clicks
+     */
+    private showEncodingComplete(encodeTime: number): void {
+        this.processingIndicator.hidden = true;
+        this.processingIndicator.text = 'Processing...'; // Reset for future use
+        this.instructions.text = `Ready! Click to segment (encoded in ${encodeTime}ms)`;
+        // Re-enable clicks
+        this.imagePreviewCanvas.style.pointerEvents = 'auto';
+        this.imagePreviewCanvas.style.cursor = 'crosshair';
+        // Show encode time in stats
+        this.statsLabel.text = `Encode: ${encodeTime}ms`;
+        this.statsContainer.hidden = false;
+    }
+
+    /**
      * Show preview mode - displays Apply/Cancel buttons for mask confirmation
      */
     private showPreviewMode(): void {
@@ -1632,8 +1672,8 @@ const samPanelStyles = `
     gap: 14px;
     z-index: 100;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    min-width: 1020px;
-    max-width: 1100px;
+    min-width: 1150px;
+    max-width: 1280px;
 }
 
 .sam-panel-header {
@@ -1731,7 +1771,7 @@ const samPanelStyles = `
     display: block;
     width: 100%;
     height: auto;
-    aspect-ratio: 16/9;
+    aspect-ratio: 2/1;
 }
 
 .sam-panel-processing {

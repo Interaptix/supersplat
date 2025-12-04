@@ -155,10 +155,13 @@ class SamSelection {
         };
 
         this.activate = () => {
-            svg.classList.remove('hidden');
-            parent.style.display = 'block';
-            parent.addEventListener('pointerdown', pointerdown);
-            parent.addEventListener('contextmenu', contextmenu);
+            // Option B: Hide viewport overlay entirely - all clicks happen on the panel's preview canvas
+            // Keep SVG hidden since we won't draw points on the main viewport
+            svg.classList.add('hidden');
+            parent.style.display = 'none';
+            
+            // Don't add viewport pointerdown handlers - clicks go to panel instead
+            // But keep keyboard shortcuts active
             document.addEventListener('keydown', keydown);
 
             // Clear any previous points
@@ -168,15 +171,13 @@ class SamSelection {
             events.fire('sam.activated');
 
             // Immediately capture viewport preview when tool opens
-            // This shows the current view in the panel before any clicks
+            // This shows the current view in the panel and starts pre-encoding
             events.fire('sam.capturePreview');
         };
 
         this.deactivate = () => {
             svg.classList.add('hidden');
             parent.style.display = 'none';
-            parent.removeEventListener('pointerdown', pointerdown);
-            parent.removeEventListener('contextmenu', contextmenu);
             document.removeEventListener('keydown', keydown);
 
             // Clear points on deactivation

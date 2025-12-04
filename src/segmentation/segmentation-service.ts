@@ -354,8 +354,9 @@ export class SegmentationService {
     }
 
     /**
-     * Capture viewport preview immediately (without running segmentation)
+     * Capture viewport preview and immediately start pre-encoding.
      * Called when SAM tool activates to show current view in preview panel
+     * and pre-warm the SAM2 encoder embeddings while user decides where to click.
      */
     private async captureViewportPreview(): Promise<void> {
         try {
@@ -378,8 +379,44 @@ export class SegmentationService {
                 width,
                 height
             });
+
+            // Immediately start pre-encoding the image in background
+            // This happens while the user is looking at the preview and deciding where to click
+            this.preEncodeImage(image, width, height);
         } catch (error) {
             console.warn('Failed to capture viewport preview:', error);
+        }
+    }
+
+    /**
+     * Pre-encode the captured image in background.
+     * This pre-warms the SAM2 encoder so decoding is instant when user clicks.
+     */
+    private async preEncodeImage(image: Uint8Array, width: number, height: number): Promise<void> {
+        // Fire encoding start event for UI feedback
+        this.events.fire('sam.encodingStart');
+
+        try {
+            // Ensure provider is initialized
+            if (!this.provider || this.provider.getState() !== 'ready') {
+                await this.initializeProvider();
+            }
+
+            if (!this.provider) {
+                throw new Error('Failed to initialize segmentation provider');
+            }
+
+            // Pre-encode the image (creates embeddings without running decoder)
+            const result = await this.provider.preEncodeImage(image, width, height);
+
+            // Fire encoding complete event with timing
+            this.events.fire('sam.encodingComplete', {
+                encodeTime: result.encodeTime
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.events.fire('sam.encodingError', errorMessage);
+            console.warn('Failed to pre-encode image:', error);
         }
     }
 

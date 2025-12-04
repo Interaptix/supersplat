@@ -202,6 +202,47 @@ export class WebGPUProvider implements SegmentationProvider {
     }
 
     /**
+     * Pre-encode an image without running the decoder.
+     * This allows encoding to happen in the background while the user positions their click.
+     * Call this immediately when capturing a new image to pre-warm the embeddings.
+     * 
+     * @returns Promise that resolves with encode timing when complete
+     */
+    async preEncodeImage(imageData: Uint8Array, width: number, height: number): Promise<{ encodeTime: number }> {
+        if (this.state !== 'ready') {
+            if (this.state === 'idle') {
+                await this.initialize();
+            } else {
+                throw new Error(`Provider not ready for encoding (state: ${this.state})`);
+            }
+        }
+
+        // Use current session imageId, or create one if not started
+        if (!this.currentImageId) {
+            this.currentImageId = `img_${++this.imageIdCounter}`;
+            this.log(`Auto-created session for pre-encoding: ${this.currentImageId}`);
+        }
+        const imageId = this.currentImageId;
+
+        this.log(`Pre-encoding image ${imageId} (${width}x${height})`);
+
+        // Send encode-only request to worker
+        const result = await this.sendWorkerMessage({
+            type: 'encode',
+            imageId,
+            imageData,
+            width,
+            height
+        }) as Extract<WorkerResponseMessage, { type: 'encoded' }>;
+
+        this.log(`Pre-encoding complete in ${result.encodeTime}ms`);
+
+        return {
+            encodeTime: result.encodeTime
+        };
+    }
+
+    /**
      * Perform single-view segmentation with iterative refinement support.
      * 
      * IMPORTANT: For iterative refinement (clicking multiple points on same image):
