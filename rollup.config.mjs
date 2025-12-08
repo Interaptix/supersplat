@@ -63,7 +63,11 @@ const application = {
                 { src: 'static/icons', dest: 'static' },
                 { src: 'static/lib', dest: 'static' },
                 { src: 'static/locales', dest: 'static' },
-                { src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env' }
+                { src: 'static/env/VertebraeHDRI_v1_512.png', dest: 'static/env' },
+                // ONNX Runtime WASM files for SAM2 worker
+                { src: 'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm' },
+                { src: 'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.wasm' },
+                { src: 'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.wasm' }
             ]
         }),
         alias({
@@ -118,7 +122,28 @@ const serviceWorker = {
     cache: false
 };
 
+// SAM2 Web Worker - must be bundled separately
+const samWorker = {
+    input: 'src/sam/sam-worker.ts',
+    output: {
+        file: 'dist/sam-worker.js',
+        format: 'esm',
+        sourcemap: true
+    },
+    plugins: [
+        typescript({
+            tsconfig: './tsconfig.json'
+        }),
+        resolve(),
+        json(),
+        BUILD_TYPE !== 'debug' && terser()
+    ],
+    treeshake: 'smallest',
+    cache: false
+};
+
 export default [
     application,
-    serviceWorker
+    serviceWorker,
+    samWorker
 ];

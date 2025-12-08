@@ -22,6 +22,7 @@ import { TimelinePanel } from './timeline-panel';
 import { Tooltips } from './tooltips';
 import { VideoSettingsDialog } from './video-settings-dialog';
 import { ViewCube } from './view-cube';
+import { SAMDialog } from '../sam/sam-dialog';
 import { ViewPanel } from './view-panel';
 import { version } from '../../package.json';
 
@@ -179,11 +180,15 @@ class EditorUI {
         // video settings
         const videoSettingsDialog = new VideoSettingsDialog(events);
 
+        // SAM2 dialog
+        const samDialog = new SAMDialog(events);
+
         topContainer.append(popup);
         topContainer.append(exportPopup);
         topContainer.append(publishSettingsDialog);
         topContainer.append(imageSettingsDialog);
         topContainer.append(videoSettingsDialog);
+        topContainer.append(samDialog);
 
         appContainer.append(editorContainer);
         appContainer.append(topContainer);
@@ -358,6 +363,18 @@ class EditorUI {
 
         events.on('progressEnd', () => {
             progress.hidden = true;
+        });
+
+        // SAM2 tool event
+        events.on('tool.sam2', async () => {
+            console.log('SAM2 tool event fired!');
+            const result = await samDialog.show();
+            if (result) {
+                // The result is a masked image canvas
+                // For now, just log that we got a result
+                console.log('SAM2 mask applied:', result);
+                // Future: could use the mask for selection or other operations
+            }
         });
 
         // initialize canvas to correct size before creating graphics device etc
