@@ -15,6 +15,9 @@ import {
 } from './image-utils';
 import { localize } from '../ui/localization';
 
+// Configuration: Set to false for automatic mode (production), true for debug mode (manual controls)
+const SAM_DEBUG_MODE = false;
+
 // SAM2 constants
 const IMAGE_SIZE = { w: 1024, h: 1024 };
 const MASK_SIZE = { w: 256, h: 256 };
@@ -78,6 +81,10 @@ class SAMDialog extends Container {
         let allMasks: AllMasks | null = null;
         let points: SAM2Point[] = [];
         let stats: Stats | null = null;
+
+        // Automatic mode state (used when SAM_DEBUG_MODE = false)
+        let workerReady = false;
+        let pendingAutoEncode = false;
 
         // Store camera pose and original dimensions when capturing screen
         let capturedCameraPose: {
@@ -291,6 +298,10 @@ class SAMDialog extends Container {
             capturedOriginalHeight = 0;
             stats = null;
 
+            // Reset automatic mode state
+            workerReady = false;
+            pendingAutoEncode = false;
+
             // Reset UI
             updateStatus('Initializing...');
             updatePointsLabel();
@@ -314,6 +325,79 @@ class SAMDialog extends Container {
         maskButtons.forEach((btn, i) => {
             btn.dom.addEventListener('click', () => selectMask(i));
         });
+
+        // Auto-encode image (used in automatic mode)
+        const autoEncodeImage = () => {
+            if (!image || !worker) return;
+
+            const resizedCanvas = resizeCanvas(image, IMAGE_SIZE);
+            const tensorData = canvasToFloat32Array(resizedCanvas);
+
+            worker.postMessage({
+                type: 'encodeImage',
+                data: tensorData
+            });
+
+            updateStatus('Encoding image...', true);
+        };
+
+        // Auto-capture screen (used in automatic mode)
+        const autoCaptureScreen = async () => {
+            try {
+                updateStatus('Capturing screen...', true);
+
+                // Invoke the capture.screen event to get the current canvas and camera pose
+                const captureData = await events.invoke('capture.screen');
+
+                if (captureData && captureData.image) {
+                    // Store the camera pose and original dimensions for later use
+                    capturedCameraPose = captureData.cameraPose;
+                    capturedOriginalWidth = captureData.canvasWidth;
+                    capturedOriginalHeight = captureData.canvasHeight;
+
+                    // Get the captured canvas
+                    const capturedCanvas = captureData.image;
+                    const width = capturedCanvas.width;
+                    const height = capturedCanvas.height;
+
+                    // Calculate padding to make square (same logic as loadImage)
+                    const largestDim = Math.max(width, height);
+                    const padX = (largestDim - width) / 2;
+                    const padY = (largestDim - height) / 2;
+
+                    // Create a square canvas with the captured image centered
+                    const squareCanvas = document.createElement('canvas');
+                    squareCanvas.width = largestDim;
+                    squareCanvas.height = largestDim;
+
+                    const ctx = squareCanvas.getContext('2d')!;
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, largestDim, largestDim);
+                    ctx.drawImage(capturedCanvas, padX, padY, width, height);
+
+                    // Set as current image
+                    image = squareCanvas;
+                    clearSegmentation();
+                    imageEncoded = false;
+                    drawCanvas();
+
+                    console.log('[SAM2] Auto-captured screen with camera pose:', capturedCameraPose);
+
+                    // In automatic mode, either encode immediately if worker ready, or set pending flag
+                    if (workerReady) {
+                        autoEncodeImage();
+                    } else {
+                        pendingAutoEncode = true;
+                        updateStatus('Waiting for model...', true);
+                    }
+                } else {
+                    updateStatus('Failed to capture screen');
+                }
+            } catch (error) {
+                console.error('[SAM2] Error auto-capturing screen:', error);
+                updateStatus(`Error capturing screen: ${(error as Error).message}`);
+            }
+        };
 
         const handleDecodingResults = (decodingResults: any) => {
             const maskTensors = decodingResults.masks;
@@ -353,13 +437,21 @@ class SAMDialog extends Container {
         const onWorkerMessage = (event: MessageEvent) => {
             const { type, data } = event.data;
 
-            if (type === 'pong') {
+            if (type === 'modelReady') {
                 const { success, device: dev } = data;
                 if (success) {
                     device = dev;
                     updateDeviceLabel();
-                    updateStatus('Ready. Encode image to start.');
-                    encodeButton.enabled = image !== null;
+                    workerReady = true;
+
+                    // In automatic mode, check if we have a pending image to encode
+                    if (!SAM_DEBUG_MODE && pendingAutoEncode && image) {
+                        pendingAutoEncode = false;
+                        autoEncodeImage();
+                    } else {
+                        updateStatus('Ready. Encode image to start.');
+                        encodeButton.enabled = image !== null;
+                    }
                 } else {
                     updateStatus('Error loading model (check console)');
                 }
@@ -390,7 +482,7 @@ class SAMDialog extends Container {
                 console.error('[SAM2] Worker error:', e);
                 updateStatus(`Worker error: ${e.message}`);
             });
-            worker.postMessage({ type: 'ping' });
+            worker.postMessage({ type: 'initModel' });
             updateStatus('Initializing...', true);
         };
 
@@ -584,20 +676,35 @@ class SAMDialog extends Container {
             // Initialize worker if needed
             initWorker();
 
-            // Always ping the worker to update status (worker may already be initialized from previous open)
+            // Always send initModel to the worker to update status (worker may already be initialized from previous open)
             if (worker) {
-                worker.postMessage({ type: 'ping' });
+                worker.postMessage({ type: 'initModel' });
                 updateStatus('Initializing...', true);
             }
 
-            // If a captured image is provided, use it
-            if (capturedImage) {
-                image = capturedImage;
-                clearSegmentation();
-                imageEncoded = false;
-                drawCanvas();
-                updateStatus('Ready. Encode image to start.');
-                encodeButton.enabled = true;
+            // Mode-specific behavior
+            if (SAM_DEBUG_MODE) {
+                // Debug mode: Show all manual controls, optionally use provided image
+                encodeButton.hidden = false;
+                uploadButton.hidden = false;
+                captureButton.hidden = false;
+
+                if (capturedImage) {
+                    image = capturedImage;
+                    clearSegmentation();
+                    imageEncoded = false;
+                    drawCanvas();
+                    updateStatus('Ready. Encode image to start.');
+                    encodeButton.enabled = true;
+                }
+            } else {
+                // Automatic mode: Hide manual controls, auto-capture and encode
+                encodeButton.hidden = true;
+                uploadButton.hidden = true;
+                captureButton.hidden = true;
+
+                // Auto-capture screen and encode (handles async timing internally)
+                autoCaptureScreen();
             }
 
             return new Promise<SAMSelectionResult | null>((resolve) => {

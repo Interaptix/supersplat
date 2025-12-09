@@ -36,8 +36,8 @@ const stats: Stats = {
 };
 
 // Message types
-interface PingMessage {
-    type: 'ping';
+interface InitModelMessage {
+    type: 'initModel';
 }
 
 interface EncodeImageMessage {
@@ -61,13 +61,13 @@ interface StatsMessage {
     type: 'stats';
 }
 
-type WorkerMessage = PingMessage | EncodeImageMessage | DecodeMaskMessage | StatsMessage;
+type WorkerMessage = InitModelMessage | EncodeImageMessage | DecodeMaskMessage | StatsMessage;
 
 // Handle incoming messages
 self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
     const { type } = e.data;
 
-    if (type === 'ping') {
+    if (type === 'initModel') {
         // Download models
         self.postMessage({ type: 'downloadInProgress' });
         const startTime = performance.now();
@@ -81,7 +81,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
         stats.device = report.device || 'unknown';
 
-        self.postMessage({ type: 'pong', data: report });
+        self.postMessage({ type: 'modelReady', data: report });
         self.postMessage({ type: 'stats', data: stats });
     } else if (type === 'encodeImage') {
         const message = e.data as EncodeImageMessage;
