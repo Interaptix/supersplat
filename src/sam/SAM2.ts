@@ -29,6 +29,8 @@ type SessionInfo = [ort.InferenceSession, string];
 
 /**
  * Get filename from URL (replacement for Node.js path.basename)
+ * @param {string} url - The URL to extract filename from
+ * @returns {string} The filename extracted from the URL
  */
 function getFilenameFromUrl(url: string): string {
     const urlObj = new URL(url);
@@ -43,7 +45,6 @@ export class SAM2 {
     sessionDecoder: SessionInfo | null = null;
     image_encoded: ImageEncoded | null = null;
 
-    constructor() {}
 
     async downloadModels(): Promise<void> {
         this.bufferEncoder = await this.downloadModel(ENCODER_URL);
@@ -68,7 +69,7 @@ export class SAM2 {
         }
 
         // step 2: download if not cached
-        console.log('File not in cache, downloading from ' + url);
+        console.log(`File not in cache, downloading from ${url}`);
         let buffer: ArrayBuffer | null = null;
         try {
             buffer = await fetch(url, {
@@ -76,9 +77,9 @@ export class SAM2 {
                     Origin: location.origin
                 }),
                 mode: 'cors'
-            }).then((response) => response.arrayBuffer());
+            }).then(response => response.arrayBuffer());
         } catch (e) {
-            console.error('Download of ' + url + ' failed: ', e);
+            console.error(`Download of ${url} failed: `, e);
             return null;
         }
 
@@ -89,9 +90,9 @@ export class SAM2 {
             await writable.write(buffer);
             await writable.close();
 
-            console.log('Stored ' + filename);
+            console.log(`Stored ${filename}`);
         } catch (e) {
-            console.error('Storage of ' + filename + ' failed: ', e);
+            console.error(`Storage of ${filename} failed: `, e);
         }
 
         return buffer;
@@ -108,12 +109,11 @@ export class SAM2 {
     }
 
     async getORTSession(model: ArrayBuffer): Promise<SessionInfo | null> {
-        /** Creating a session with executionProviders: {"webgpu", "cpu"} fails
-         *  => "Error: multiple calls to 'initWasm()' detected."
-         *  but ONLY in Safari and Firefox (wtf)
-         *  seems to be related to web worker, see https://github.com/microsoft/onnxruntime/issues/22113
-         *  => loop through each ep, catch e if not available and move on
-         */
+        // Creating a session with executionProviders: {"webgpu", "cpu"} fails
+        // => "Error: multiple calls to 'initWasm()' detected."
+        // but ONLY in Safari and Firefox (wtf)
+        // seems to be related to web worker, see https://github.com/microsoft/onnxruntime/issues/22113
+        // => loop through each ep, catch e if not available and move on
         let session: ort.InferenceSession | null = null;
         for (const ep of ['webgpu', 'cpu'] as const) {
             try {
@@ -238,7 +238,7 @@ export class SAM2 {
             console.log(`[SAM2 TENSOR] ${name}: shape=[${tensor.dims.join(',')}], min=${min.toFixed(6)}, max=${max.toFixed(6)}, mean=${mean.toFixed(6)}, std=${std.toFixed(6)}, zeros=${zeroCount}/${data.length}`);
 
             // Log first few values for exact matching
-            const firstFew = Array.from(data.slice(0, 10)).map((v) => v.toFixed(6)).join(', ');
+            const firstFew = Array.from(data.slice(0, 10)).map(v => v.toFixed(6)).join(', ');
             console.log(`[SAM2 TENSOR] ${name} data[0..9]: [${firstFew}]`);
         };
 
