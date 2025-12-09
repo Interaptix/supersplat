@@ -4,14 +4,15 @@
  * Ported from next-sam React implementation.
  */
 
-import { Button, Container, Element, Label, Spinner } from '@playcanvas/pcui';
+import { Button, Container, Element, Label, SliderInput, Spinner } from '@playcanvas/pcui';
 
 import { Events } from '../events';
 import {
     resizeCanvas,
     canvasToFloat32Array,
     float32ArrayToCanvas,
-    sliceTensor
+    sliceTensor,
+    dilateMask
 } from './image-utils';
 import { localize } from '../ui/localization';
 
@@ -82,6 +83,7 @@ class SAMDialog extends Container {
         let allMasks: AllMasks | null = null;
         let points: SAM2Point[] = [];
         let stats: Stats | null = null;
+        let dilationSize = 0; // Mask dilation in pixels (0 = no dilation)
 
         // Automatic mode state (used when SAM_DEBUG_MODE = false)
         let workerReady = false;
@@ -168,6 +170,36 @@ class SAMDialog extends Container {
         maskRow.append(maskLabel);
         maskButtons.forEach(btn => maskRow.append(btn));
 
+        // Dilation row
+        const dilationRow = new Container({ class: 'sam-dilation-row' });
+        const dilationLabel = new Label({ class: 'label', text: 'Expand Mask:' });
+        const dilationSlider = new SliderInput({
+            class: 'sam-dilation-slider',
+            min: 0,
+            max: 20,
+            step: 1,
+            value: 0,
+            sliderMin: 0,
+            sliderMax: 20
+        });
+        const dilationValueLabel = new Label({ class: 'sam-dilation-value', text: '0 px' });
+        dilationRow.append(dilationLabel);
+        dilationRow.append(dilationSlider);
+        dilationRow.append(dilationValueLabel);
+
+        // Update dilation when slider changes (with real-time preview)
+        dilationSlider.on('change', (value: number) => {
+            dilationSize = Math.round(value);
+            dilationValueLabel.text = `${dilationSize} px`;
+            
+            // Apply dilation to preview in real-time
+            if (allMasks) {
+                const originalMask = allMasks.canvases[allMasks.selectedIdx];
+                mask = dilationSize > 0 ? dilateMask(originalMask, dilationSize) : originalMask;
+                drawCanvas();
+            }
+        });
+
         // Footer
         const footer = new Container({ id: 'footer', class: 'sam-footer' });
 
@@ -208,6 +240,7 @@ class SAMDialog extends Container {
         content.append(buttonRow);
         content.append(pointsLabel);
         content.append(maskRow);
+        content.append(dilationRow);
 
         dialog.append(header);
         dialog.append(content);
@@ -741,9 +774,11 @@ class SAMDialog extends Container {
 
                 onApply = (operation: 'add' | 'remove' | 'set') => {
                     if (mask && capturedCameraPose && capturedOriginalWidth > 0) {
+                        // Apply mask dilation if slider is set
+                        const finalMask = dilationSize > 0 ? dilateMask(mask, dilationSize) : mask;
                         // Return the selection result with mask, camera pose, original dimensions, and operation
                         resolve({
-                            mask,
+                            mask: finalMask,
                             cameraPose: capturedCameraPose,
                             originalWidth: capturedOriginalWidth,
                             originalHeight: capturedOriginalHeight,

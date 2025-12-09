@@ -6,6 +6,118 @@
 import { Tensor } from 'onnxruntime-web';
 
 /**
+ * Dilate a binary mask to expand its regions.
+ * Uses a box kernel for efficient morphological dilation.
+ * This expands masked regions by the kernel radius in all directions.
+ * 
+ * @param canvas - The mask canvas to dilate (uses alpha channel)
+ * @param kernelSize - The dilation kernel size in pixels (will be made odd if even)
+ * @returns A new canvas with the dilated mask
+ */
+export function dilateMask(canvas: HTMLCanvasElement, kernelSize: number): HTMLCanvasElement {
+    if (kernelSize <= 0) {
+        // No dilation needed, return a copy
+        const result = document.createElement('canvas');
+        result.width = canvas.width;
+        result.height = canvas.height;
+        const ctx = result.getContext('2d')!;
+        ctx.drawImage(canvas, 0, 0);
+        return result;
+    }
+
+    // Ensure kernel size is odd for symmetric dilation
+    kernelSize = Math.max(1, Math.floor(kernelSize));
+    if (kernelSize % 2 === 0) {
+        kernelSize += 1;
+    }
+    const radius = Math.floor(kernelSize / 2);
+
+    const width = canvas.width;
+    const height = canvas.height;
+
+    // Get source image data
+    const ctx = canvas.getContext('2d')!;
+    const srcData = ctx.getImageData(0, 0, width, height);
+    const src = srcData.data;
+
+    // Create output canvas
+    const result = document.createElement('canvas');
+    result.width = width;
+    result.height = height;
+    const resultCtx = result.getContext('2d')!;
+    const dstData = resultCtx.createImageData(width, height);
+    const dst = dstData.data;
+
+    // Extract alpha channel into binary array (255 = masked, 0 = not masked)
+    const srcAlpha = new Uint8Array(width * height);
+    for (let i = 0; i < width * height; i++) {
+        srcAlpha[i] = src[i * 4 + 3] > 0 ? 255 : 0;
+    }
+
+    // Efficient separable dilation using two passes (horizontal + vertical)
+    // This reduces complexity from O(n * k^2) to O(n * k)
+    
+    // Intermediate buffer for horizontal pass
+    const temp = new Uint8Array(width * height);
+
+    // Pass 1: Horizontal dilation
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            let maxVal = 0;
+            for (let kx = -radius; kx <= radius; kx++) {
+                const nx = x + kx;
+                if (nx >= 0 && nx < width) {
+                    if (srcAlpha[y * width + nx] > maxVal) {
+                        maxVal = srcAlpha[y * width + nx];
+                    }
+                }
+            }
+            temp[y * width + x] = maxVal;
+        }
+    }
+
+    // Pass 2: Vertical dilation on the horizontally dilated result
+    const dilatedAlpha = new Uint8Array(width * height);
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            let maxVal = 0;
+            for (let ky = -radius; ky <= radius; ky++) {
+                const ny = y + ky;
+                if (ny >= 0 && ny < height) {
+                    if (temp[ny * width + x] > maxVal) {
+                        maxVal = temp[ny * width + x];
+                    }
+                }
+            }
+            dilatedAlpha[y * width + x] = maxVal;
+        }
+    }
+
+    // Write output: copy RGB from source, use dilated alpha
+    // For dilated pixels, use the mask color (green) consistent with float32ArrayToCanvas
+    for (let i = 0; i < width * height; i++) {
+        const srcIdx = i * 4;
+        const alpha = dilatedAlpha[i];
+        
+        if (alpha > 0) {
+            // Use the same green mask color as float32ArrayToCanvas
+            dst[srcIdx] = 0x32;     // R
+            dst[srcIdx + 1] = 0xcd; // G  
+            dst[srcIdx + 2] = 0x32; // B
+            dst[srcIdx + 3] = 255;  // A
+        } else {
+            dst[srcIdx] = 0;
+            dst[srcIdx + 1] = 0;
+            dst[srcIdx + 2] = 0;
+            dst[srcIdx + 3] = 0;
+        }
+    }
+
+    resultCtx.putImageData(dstData, 0, 0);
+    return result;
+}
+
+/**
  * Mask an image canvas with a mask canvas.
  * Applies the mask as an alpha channel to the image.
  * @param {HTMLCanvasElement} imageCanvas - The source image canvas
