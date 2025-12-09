@@ -29,6 +29,26 @@
         padding: 12px;
     }
 
+    .sam-footer {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        // Cancel button stays on left
+        > .button:first-child {
+            margin-right: auto;
+        }
+
+        // Action buttons group on right
+        .sam-action-button {
+            min-width: 120px;
+
+            &.pcui-disabled {
+                opacity: 0.5;
+            }
+        }
+    }
+
     .sam-status-row {
         display: flex;
         align-items: center;

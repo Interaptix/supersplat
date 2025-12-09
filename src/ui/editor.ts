@@ -434,7 +434,7 @@ class EditorUI {
 
                 // Fire the select.byMask event with the transformed mask
                 // The selection system expects: op ('set', 'add', 'remove'), canvas, context
-                events.fire('select.byMask', 'set', screenMaskCanvas, ctx);
+                events.fire('select.byMask', result.operation, screenMaskCanvas, ctx);
 
                 console.log('[SAM2] select.byMask event fired');
             }

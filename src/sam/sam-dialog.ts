@@ -51,6 +51,7 @@ interface SAMSelectionResult {
     };
     originalWidth: number;
     originalHeight: number;
+    operation: 'add' | 'remove' | 'set';
 }
 
 class SAMDialog extends Container {
@@ -168,21 +169,36 @@ class SAMDialog extends Container {
         maskButtons.forEach(btn => maskRow.append(btn));
 
         // Footer
-        const footer = new Container({ id: 'footer' });
+        const footer = new Container({ id: 'footer', class: 'sam-footer' });
 
         const cancelButton = new Button({
             class: 'button',
             text: 'Cancel'
         });
 
-        const okButton = new Button({
-            class: 'button',
-            text: 'Apply Mask',
+        // Selection operation buttons
+        const setButton = new Button({
+            class: ['button', 'sam-action-button'],
+            text: 'Set Selection',
+            enabled: false
+        });
+
+        const addButton = new Button({
+            class: ['button', 'sam-action-button'],
+            text: 'Add to Selection',
+            enabled: false
+        });
+
+        const removeButton = new Button({
+            class: ['button', 'sam-action-button'],
+            text: 'Remove from Selection',
             enabled: false
         });
 
         footer.append(cancelButton);
-        footer.append(okButton);
+        footer.append(setButton);
+        footer.append(addButton);
+        footer.append(removeButton);
 
         // Assemble dialog
         const content = new Container({ id: 'content' });
@@ -214,7 +230,10 @@ class SAMDialog extends Container {
             statusSpinner.hidden = !isLoading;
             encodeButton.enabled = !isLoading && !imageEncoded && image !== null;
             clearButton.enabled = !isLoading && points.length > 0;
-            okButton.enabled = !isLoading && mask !== null;
+            const maskReady = !isLoading && mask !== null;
+            setButton.enabled = maskReady;
+            addButton.enabled = maskReady;
+            removeButton.enabled = maskReady;
         };
 
         const updateDeviceLabel = () => {
@@ -281,7 +300,9 @@ class SAMDialog extends Container {
             updatePointsLabel();
             updateMaskButtons();
             drawCanvas();
-            okButton.enabled = false;
+            setButton.enabled = false;
+            addButton.enabled = false;
+            removeButton.enabled = false;
         };
 
         // Full reset for opening dialog (clears everything for fresh session)
@@ -308,7 +329,9 @@ class SAMDialog extends Container {
             updateMaskButtons();
             encodeButton.enabled = false;
             clearButton.enabled = false;
-            okButton.enabled = false;
+            setButton.enabled = false;
+            addButton.enabled = false;
+            removeButton.enabled = false;
             drawCanvas();
         };
 
@@ -430,7 +453,9 @@ class SAMDialog extends Container {
             updateMaskButtons();
             drawCanvas();
             updateStatus('Ready. Click on image to refine.');
-            okButton.enabled = true;
+            setButton.enabled = true;
+            addButton.enabled = true;
+            removeButton.enabled = true;
         };
 
         // Worker message handler
@@ -649,7 +674,7 @@ class SAMDialog extends Container {
 
         // Keyboard handler
         let onCancel: () => void;
-        let onOK: () => void;
+        let onApply: (operation: 'add' | 'remove' | 'set') => void;
 
         const keydown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
@@ -660,7 +685,9 @@ class SAMDialog extends Container {
         };
 
         cancelButton.on('click', () => onCancel());
-        okButton.on('click', () => onOK());
+        setButton.on('click', () => onApply('set'));
+        addButton.on('click', () => onApply('add'));
+        removeButton.on('click', () => onApply('remove'));
 
         // Public methods
         this.show = (capturedImage?: HTMLCanvasElement) => {
@@ -712,14 +739,15 @@ class SAMDialog extends Container {
                     resolve(null);
                 };
 
-                onOK = () => {
+                onApply = (operation: 'add' | 'remove' | 'set') => {
                     if (mask && capturedCameraPose && capturedOriginalWidth > 0) {
-                        // Return the selection result with mask, camera pose, and original dimensions
+                        // Return the selection result with mask, camera pose, original dimensions, and operation
                         resolve({
                             mask,
                             cameraPose: capturedCameraPose,
                             originalWidth: capturedOriginalWidth,
-                            originalHeight: capturedOriginalHeight
+                            originalHeight: capturedOriginalHeight,
+                            operation
                         });
                     } else {
                         resolve(null);
