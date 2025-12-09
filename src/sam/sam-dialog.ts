@@ -11,8 +11,7 @@ import {
     resizeCanvas,
     canvasToFloat32Array,
     float32ArrayToCanvas,
-    sliceTensor,
-    maskImageCanvas
+    sliceTensor
 } from './image-utils';
 
 // SAM2 constants
@@ -39,8 +38,19 @@ interface Stats {
     decodeTimes: number[];
 }
 
+// Selection result returned when user applies mask
+interface SAMSelectionResult {
+    mask: HTMLCanvasElement;
+    cameraPose: {
+        position: { x: number; y: number; z: number };
+        target: { x: number; y: number; z: number };
+    };
+    originalWidth: number;
+    originalHeight: number;
+}
+
 class SAMDialog extends Container {
-    show: (capturedImage?: HTMLCanvasElement) => Promise<HTMLCanvasElement | null>;
+    show: (capturedImage?: HTMLCanvasElement) => Promise<SAMSelectionResult | null>;
     hide: () => void;
     destroy: () => void;
 
@@ -68,15 +78,13 @@ class SAMDialog extends Container {
         let points: SAM2Point[] = [];
         let stats: Stats | null = null;
 
-        // Store camera pose when capturing screen
+        // Store camera pose and original dimensions when capturing screen
         let capturedCameraPose: {
-            focalPoint: number[];
-            azim: number;
-            elev: number;
-            distance: number;
-            fov: number;
-            tonemapping: string;
+            position: { x: number; y: number; z: number };
+            target: { x: number; y: number; z: number };
         } | null = null;
+        let capturedOriginalWidth = 0;
+        let capturedOriginalHeight = 0;
 
         // Dialog container
         const dialog = new Container({ id: 'dialog', class: 'sam-dialog-inner' });
@@ -279,6 +287,8 @@ class SAMDialog extends Container {
             points = [];
             imageEncoded = false;
             capturedCameraPose = null;
+            capturedOriginalWidth = 0;
+            capturedOriginalHeight = 0;
             stats = null;
 
             // Reset UI
@@ -468,8 +478,10 @@ class SAMDialog extends Container {
                 const captureData = await events.invoke('capture.screen');
 
                 if (captureData && captureData.image) {
-                    // Store the camera pose for later restoration
+                    // Store the camera pose and original dimensions for later use
                     capturedCameraPose = captureData.cameraPose;
+                    capturedOriginalWidth = captureData.canvasWidth;
+                    capturedOriginalHeight = captureData.canvasHeight;
 
                     // Get the captured canvas
                     const capturedCanvas = captureData.image;
@@ -577,16 +589,20 @@ class SAMDialog extends Container {
                 encodeButton.enabled = true;
             }
 
-            return new Promise<HTMLCanvasElement | null>((resolve) => {
+            return new Promise<SAMSelectionResult | null>((resolve) => {
                 onCancel = () => {
                     resolve(null);
                 };
 
                 onOK = () => {
-                    if (image && mask) {
-                        // Return the masked image
-                        const result = maskImageCanvas(image, mask);
-                        resolve(result);
+                    if (mask && capturedCameraPose && capturedOriginalWidth > 0) {
+                        // Return the selection result with mask, camera pose, and original dimensions
+                        resolve({
+                            mask,
+                            cameraPose: capturedCameraPose,
+                            originalWidth: capturedOriginalWidth,
+                            originalHeight: capturedOriginalHeight
+                        });
                     } else {
                         resolve(null);
                     }

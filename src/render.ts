@@ -46,12 +46,8 @@ const downloadFile = (arrayBuffer: ArrayBuffer, filename: string) => {
 interface CapturedScreenData {
     image: HTMLCanvasElement;
     cameraPose: {
-        focalPoint: number[];
-        azim: number;
-        elev: number;
-        distance: number;
-        fov: number;
-        tonemapping: string;
+        position: { x: number; y: number; z: number };
+        target: { x: number; y: number; z: number };
     };
     timestamp: number;
     canvasWidth: number;
@@ -125,7 +121,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             const height = scene.canvas.height;
 
             // Get camera pose for later restoration (before any state changes)
-            const cameraPose = scene.camera.docSerialize();
+            // Use camera.getPose which returns {position, target} format compatible with camera.setPose
+            const cameraPose = events.invoke('camera.getPose');
 
             // Temporarily disable overlays and gizmos for clean capture
             scene.camera.renderOverlays = false;
