@@ -6,10 +6,14 @@
 console.log('[SAM2 Worker] Worker script loaded');
 
 import * as ort from 'onnxruntime-web';
+
 import { SAM2 } from './SAM2';
 
-// Worker context
-declare const self: DedicatedWorkerGlobalScope;
+// Worker context - use intersection type for worker global scope
+declare const self: typeof globalThis & {
+    postMessage: (message: unknown) => void;
+    onmessage: ((e: MessageEvent) => void) | null;
+};
 
 console.log('[SAM2 Worker] Imports complete, setting up message handler');
 

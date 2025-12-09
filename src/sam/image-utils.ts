@@ -8,6 +8,9 @@ import { Tensor } from 'onnxruntime-web';
 /**
  * Mask an image canvas with a mask canvas.
  * Applies the mask as an alpha channel to the image.
+ * @param {HTMLCanvasElement} imageCanvas - The source image canvas
+ * @param {HTMLCanvasElement} maskCanvas - The mask canvas to apply
+ * @returns {HTMLCanvasElement} A new canvas with the mask applied as alpha
  */
 export function maskImageCanvas(imageCanvas: HTMLCanvasElement, maskCanvas: HTMLCanvasElement): HTMLCanvasElement {
     const canvas = document.createElement('canvas');
@@ -58,6 +61,9 @@ export interface Box {
 
 /**
  * Resize a canvas to a new size.
+ * @param {HTMLCanvasElement} canvasOrig - The original canvas to resize
+ * @param {Size} size - The target size with w and h properties
+ * @returns {HTMLCanvasElement} A new canvas at the specified size
  */
 export function resizeCanvas(canvasOrig: HTMLCanvasElement, size: Size): HTMLCanvasElement {
     const canvas = document.createElement('canvas');
@@ -87,6 +93,9 @@ export function resizeCanvas(canvasOrig: HTMLCanvasElement, size: Size): HTMLCan
 /**
  * Merge two mask canvases together.
  * Draws source mask onto target mask.
+ * @param {HTMLCanvasElement} sourceMask - The source mask canvas to merge from
+ * @param {HTMLCanvasElement} targetMask - The target mask canvas to merge onto
+ * @returns {HTMLCanvasElement} A new canvas with both masks combined
  */
 export function mergeMasks(sourceMask: HTMLCanvasElement, targetMask: HTMLCanvasElement): HTMLCanvasElement {
     const canvas = document.createElement('canvas');
@@ -113,6 +122,9 @@ export function mergeMasks(sourceMask: HTMLCanvasElement, targetMask: HTMLCanvas
 /**
  * Calculate box dimensions to fit source into target preserving aspect ratio.
  * Returns the position and size for letterbox/pillarbox padding.
+ * @param {Size} sourceDim - The source dimensions with w and h properties
+ * @param {Size} targetDim - The target dimensions with w and h properties
+ * @returns {Box} The calculated box with position and size for padding
  */
 export function resizeAndPadBox(sourceDim: Size, targetDim: Size): Box {
     if (sourceDim.h === sourceDim.w) {
@@ -122,18 +134,21 @@ export function resizeAndPadBox(sourceDim: Size, targetDim: Size): Box {
         const newW = (sourceDim.w / sourceDim.h) * targetDim.w;
         const padLeft = Math.floor((targetDim.w - newW) / 2);
         return { x: padLeft, y: 0, w: newW, h: targetDim.h };
-    } else {
-        // landscape => resize and pad top
-        const newH = (sourceDim.h / sourceDim.w) * targetDim.h;
-        const padTop = Math.floor((targetDim.h - newH) / 2);
-        return { x: 0, y: padTop, w: targetDim.w, h: newH };
     }
+    // landscape => resize and pad top
+    const newH = (sourceDim.h / sourceDim.w) * targetDim.h;
+    const padTop = Math.floor((targetDim.h - newH) / 2);
+    return { x: 0, y: padTop, w: targetDim.w, h: newH };
+
 }
 
 /**
  * Slice a tensor to extract a specific mask.
  * Input: onnx Tensor [B, *, W, H] and index idx
  * Output: Float32Array for mask at index idx
+ * @param {Tensor} tensor - The ONNX tensor to slice from
+ * @param {number} idx - The index of the mask to extract
+ * @returns {Float32Array} The extracted mask data
  */
 export function sliceTensor(tensor: Tensor, idx: number): Float32Array {
     const [, , width, height] = tensor.dims as number[];
@@ -150,6 +165,10 @@ export function sliceTensor(tensor: Tensor, idx: number): Float32Array {
  * Convert Float32Array mask to HTMLCanvasElement.
  * Input: Float32Array representing ORT.Tensor of shape [1, 1, width, height]
  * Output: HTMLCanvasElement (4 channels, RGBA)
+ * @param {Float32Array} array - The mask data as Float32Array
+ * @param {number} width - The width of the output canvas
+ * @param {number} height - The height of the output canvas
+ * @returns {HTMLCanvasElement} A canvas with the mask rendered as RGBA
  */
 export function float32ArrayToCanvas(array: Float32Array, width: number, height: number): HTMLCanvasElement {
     const C = 4; // 4 output channels, RGBA
@@ -183,6 +202,8 @@ export interface CanvasTensorData {
  * Convert HTMLCanvasElement to Float32Array for ONNX tensor.
  * Input: HTMLCanvasElement (RGB)
  * Output: Float32Array for ORT.Tensor of shape [1, 3, canvas.width, canvas.height]
+ * @param {HTMLCanvasElement} canvas - The canvas to convert
+ * @returns {CanvasTensorData} Object containing float32Array and shape
  */
 export function canvasToFloat32Array(canvas: HTMLCanvasElement): CanvasTensorData {
     const ctx = canvas.getContext('2d')!;
@@ -214,6 +235,8 @@ export function canvasToFloat32Array(canvas: HTMLCanvasElement): CanvasTensorDat
  * Convert mask canvas to Float32Array.
  * Input: HTMLCanvasElement (RGB mask)
  * Output: Float32Array for ORT.Tensor of shape [1, 1, canvas.width, canvas.height]
+ * @param {HTMLCanvasElement} canvas - The mask canvas to convert
+ * @returns {Float32Array} The mask data as Float32Array
  */
 export function maskCanvasToFloat32Array(canvas: HTMLCanvasElement): Float32Array {
     const ctx = canvas.getContext('2d')!;
@@ -233,6 +256,8 @@ export function maskCanvasToFloat32Array(canvas: HTMLCanvasElement): Float32Arra
 /**
  * Create a canvas from an image URL.
  * Returns a promise that resolves with the canvas.
+ * @param {string} url - The URL of the image to load
+ * @returns {Promise<HTMLCanvasElement>} A promise that resolves with the canvas
  */
 export function imageUrlToCanvas(url: string): Promise<HTMLCanvasElement> {
     return new Promise((resolve, reject) => {
@@ -253,6 +278,8 @@ export function imageUrlToCanvas(url: string): Promise<HTMLCanvasElement> {
 
 /**
  * Create a canvas from an HTMLImageElement.
+ * @param {HTMLImageElement} img - The image element to convert
+ * @returns {HTMLCanvasElement} A canvas containing the image
  */
 export function imageToCanvas(img: HTMLImageElement): HTMLCanvasElement {
     const canvas = document.createElement('canvas');
@@ -265,6 +292,9 @@ export function imageToCanvas(img: HTMLImageElement): HTMLCanvasElement {
 
 /**
  * Crop a canvas to a bounding box with the mask applied.
+ * @param {HTMLCanvasElement} imageCanvas - The source image canvas
+ * @param {HTMLCanvasElement} maskCanvas - The mask canvas defining the crop area
+ * @returns {{ canvas: HTMLCanvasElement; bounds: Box } | null} The cropped canvas and bounds, or null if no mask
  */
 export function cropCanvasWithMask(
     imageCanvas: HTMLCanvasElement,
@@ -273,7 +303,7 @@ export function cropCanvasWithMask(
     // First, find the bounding box of the mask
     const maskCtx = maskCanvas.getContext('2d')!;
     const maskData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height).data;
-    
+
     let minX = maskCanvas.width;
     let minY = maskCanvas.height;
     let maxX = 0;

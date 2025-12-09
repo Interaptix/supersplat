@@ -5,14 +5,15 @@
  */
 
 import { Button, Container, Element, Label, Spinner } from '@playcanvas/pcui';
+
 import { Events } from '../events';
-import { localize } from '../ui/localization';
 import {
     resizeCanvas,
     canvasToFloat32Array,
     float32ArrayToCanvas,
     sliceTensor
 } from './image-utils';
+import { localize } from '../ui/localization';
 
 // SAM2 constants
 const IMAGE_SIZE = { w: 1024, h: 1024 };
@@ -145,7 +146,7 @@ class SAMDialog extends Container {
         // Points info
         const pointsLabel = new Label({ class: 'sam-points-label', text: 'Points: 0 (Left=Add, Right=Remove)' });
 
-        // Mask selection row
+        // Mask selection row (buttons will be wired up after selectMask is defined)
         const maskRow = new Container({ class: 'sam-mask-row', hidden: true });
         const maskLabel = new Label({ class: 'label', text: 'Select Mask:' });
         const maskButtons: Button[] = [];
@@ -154,11 +155,10 @@ class SAMDialog extends Container {
                 class: 'sam-mask-button',
                 text: `Mask ${i}`
             });
-            btn.dom.addEventListener('click', () => selectMask(i));
             maskButtons.push(btn);
         }
         maskRow.append(maskLabel);
-        maskButtons.forEach((btn) => maskRow.append(btn));
+        maskButtons.forEach(btn => maskRow.append(btn));
 
         // Footer
         const footer = new Container({ id: 'footer' });
@@ -310,6 +310,11 @@ class SAMDialog extends Container {
             drawCanvas();
         };
 
+        // Wire up mask button click handlers now that selectMask is defined
+        maskButtons.forEach((btn, i) => {
+            btn.dom.addEventListener('click', () => selectMask(i));
+        });
+
         const handleDecodingResults = (decodingResults: any) => {
             const maskTensors = decodingResults.masks;
             const [, noMasks, width, height] = maskTensors.dims;
@@ -383,7 +388,7 @@ class SAMDialog extends Container {
             worker.addEventListener('message', onWorkerMessage);
             worker.addEventListener('error', (e) => {
                 console.error('[SAM2] Worker error:', e);
-                updateStatus('Worker error: ' + e.message);
+                updateStatus(`Worker error: ${e.message}`);
             });
             worker.postMessage({ type: 'ping' });
             updateStatus('Initializing...', true);
@@ -448,6 +453,35 @@ class SAMDialog extends Container {
 
             updateStatus('Encoding image...', true);
         });
+
+        const loadImage = (url: string) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.src = url;
+            img.onload = () => {
+                const largestDim = Math.max(img.naturalWidth, img.naturalHeight);
+
+                // Calculate padding to make square
+                const padX = (largestDim - img.naturalWidth) / 2;
+                const padY = (largestDim - img.naturalHeight) / 2;
+
+                const offscreenCanvas = document.createElement('canvas');
+                offscreenCanvas.width = largestDim;
+                offscreenCanvas.height = largestDim;
+
+                const ctx = offscreenCanvas.getContext('2d')!;
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(0, 0, largestDim, largestDim);
+                ctx.drawImage(img, padX, padY, img.naturalWidth, img.naturalHeight);
+
+                image = offscreenCanvas;
+                clearSegmentation();
+                imageEncoded = false;
+                drawCanvas();
+                updateStatus('Ready. Encode image to start.');
+                encodeButton.enabled = true;
+            };
+        };
 
         uploadButton.on('click', () => {
             fileInput.click();
@@ -517,38 +551,9 @@ class SAMDialog extends Container {
                 }
             } catch (error) {
                 console.error('[SAM2] Error capturing screen:', error);
-                updateStatus('Error capturing screen: ' + (error as Error).message);
+                updateStatus(`Error capturing screen: ${(error as Error).message}`);
             }
         });
-
-        const loadImage = (url: string) => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.src = url;
-            img.onload = () => {
-                const largestDim = Math.max(img.naturalWidth, img.naturalHeight);
-
-                // Calculate padding to make square
-                const padX = (largestDim - img.naturalWidth) / 2;
-                const padY = (largestDim - img.naturalHeight) / 2;
-
-                const offscreenCanvas = document.createElement('canvas');
-                offscreenCanvas.width = largestDim;
-                offscreenCanvas.height = largestDim;
-
-                const ctx = offscreenCanvas.getContext('2d')!;
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(0, 0, largestDim, largestDim);
-                ctx.drawImage(img, padX, padY, img.naturalWidth, img.naturalHeight);
-
-                image = offscreenCanvas;
-                clearSegmentation();
-                imageEncoded = false;
-                drawCanvas();
-                updateStatus('Ready. Encode image to start.');
-                encodeButton.enabled = true;
-            };
-        };
 
         // Keyboard handler
         let onCancel: () => void;

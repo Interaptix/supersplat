@@ -22,9 +22,9 @@ import { TimelinePanel } from './timeline-panel';
 import { Tooltips } from './tooltips';
 import { VideoSettingsDialog } from './video-settings-dialog';
 import { ViewCube } from './view-cube';
-import { SAMDialog } from '../sam/sam-dialog';
 import { ViewPanel } from './view-panel';
 import { version } from '../../package.json';
+import { SAMDialog } from '../sam/sam-dialog';
 
 // ts compiler and vscode find this type, but eslint does not
 type FilePickerAcceptType = unknown;
