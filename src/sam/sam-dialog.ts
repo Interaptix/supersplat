@@ -68,6 +68,16 @@ class SAMDialog extends Container {
         let points: SAM2Point[] = [];
         let stats: Stats | null = null;
 
+        // Store camera pose when capturing screen
+        let capturedCameraPose: {
+            focalPoint: number[];
+            azim: number;
+            elev: number;
+            distance: number;
+            fov: number;
+            tonemapping: string;
+        } | null = null;
+
         // Dialog container
         const dialog = new Container({ id: 'dialog', class: 'sam-dialog-inner' });
 
@@ -108,6 +118,11 @@ class SAMDialog extends Container {
             text: 'Upload'
         });
 
+        const captureButton = new Button({
+            class: 'sam-button',
+            text: 'Capture Screen'
+        });
+
         const clearButton = new Button({
             class: 'sam-button',
             text: 'Clear Points',
@@ -116,6 +131,7 @@ class SAMDialog extends Container {
 
         buttonRow.append(encodeButton);
         buttonRow.append(uploadButton);
+        buttonRow.append(captureButton);
         buttonRow.append(clearButton);
 
         // Points info
@@ -240,14 +256,38 @@ class SAMDialog extends Container {
             }
         };
 
-        const resetState = () => {
+        // Clear segmentation results only (keeps image AND encoding)
+        // Used by: Clear Points button
+        const clearSegmentation = () => {
             points = [];
             mask = null;
             prevMaskArray = null;
             allMasks = null;
-            imageEncoded = false;
             updatePointsLabel();
             updateMaskButtons();
+            drawCanvas();
+            okButton.enabled = false;
+        };
+
+        // Full reset for opening dialog (clears everything for fresh session)
+        // Used by: show() to ensure clean slate
+        const resetSession = () => {
+            image = null;
+            mask = null;
+            prevMaskArray = null;
+            allMasks = null;
+            points = [];
+            imageEncoded = false;
+            capturedCameraPose = null;
+            stats = null;
+
+            // Reset UI
+            updateStatus('Initializing...');
+            updatePointsLabel();
+            updateMaskButtons();
+            encodeButton.enabled = false;
+            clearButton.enabled = false;
+            okButton.enabled = false;
             drawCanvas();
         };
 
@@ -413,16 +453,59 @@ class SAMDialog extends Container {
         });
 
         clearButton.on('click', () => {
-            points = [];
-            mask = null;
-            prevMaskArray = null;
-            allMasks = null;
-            updatePointsLabel();
-            updateMaskButtons();
-            drawCanvas();
-            okButton.enabled = false;
+            clearSegmentation();
             if (imageEncoded) {
                 updateStatus('Ready. Click on image to segment.');
+            }
+        });
+
+        // Capture Screen button handler
+        captureButton.on('click', async () => {
+            try {
+                updateStatus('Capturing screen...', true);
+
+                // Invoke the capture.screen event to get the current canvas and camera pose
+                const captureData = await events.invoke('capture.screen');
+
+                if (captureData && captureData.image) {
+                    // Store the camera pose for later restoration
+                    capturedCameraPose = captureData.cameraPose;
+
+                    // Get the captured canvas
+                    const capturedCanvas = captureData.image;
+                    const width = capturedCanvas.width;
+                    const height = capturedCanvas.height;
+
+                    // Calculate padding to make square (same logic as loadImage)
+                    const largestDim = Math.max(width, height);
+                    const padX = (largestDim - width) / 2;
+                    const padY = (largestDim - height) / 2;
+
+                    // Create a square canvas with the captured image centered
+                    const squareCanvas = document.createElement('canvas');
+                    squareCanvas.width = largestDim;
+                    squareCanvas.height = largestDim;
+
+                    const ctx = squareCanvas.getContext('2d')!;
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, largestDim, largestDim);
+                    ctx.drawImage(capturedCanvas, padX, padY, width, height);
+
+                    // Set as current image and reset segmentation state
+                    image = squareCanvas;
+                    clearSegmentation();
+                    imageEncoded = false;
+                    drawCanvas();
+
+                    console.log('[SAM2] Screen captured with camera pose:', capturedCameraPose);
+                    updateStatus('Ready. Encode image to start.');
+                    encodeButton.enabled = true;
+                } else {
+                    updateStatus('Failed to capture screen');
+                }
+            } catch (error) {
+                console.error('[SAM2] Error capturing screen:', error);
+                updateStatus('Error capturing screen: ' + (error as Error).message);
             }
         });
 
@@ -447,7 +530,8 @@ class SAMDialog extends Container {
                 ctx.drawImage(img, padX, padY, img.naturalWidth, img.naturalHeight);
 
                 image = offscreenCanvas;
-                resetState();
+                clearSegmentation();
+                imageEncoded = false;
                 drawCanvas();
                 updateStatus('Ready. Encode image to start.');
                 encodeButton.enabled = true;
@@ -477,13 +561,17 @@ class SAMDialog extends Container {
             document.addEventListener('keydown', keydown);
             this.dom.focus();
 
+            // Reset session state for fresh start (clears all previous session data)
+            resetSession();
+
             // Initialize worker if needed
             initWorker();
 
             // If a captured image is provided, use it
             if (capturedImage) {
                 image = capturedImage;
-                resetState();
+                clearSegmentation();
+                imageEncoded = false;
                 drawCanvas();
                 updateStatus('Ready. Encode image to start.');
                 encodeButton.enabled = true;
