@@ -90,7 +90,7 @@ class SAMDialog extends Container {
         const dialog = new Container({ id: 'dialog', class: 'sam-dialog-inner' });
 
         // Header
-        const headerText = new Label({ id: 'text', text: 'SAM2 IMAGE SEGMENTATION' });
+        const headerText = new Label({ id: 'text', text: 'SEGMENTATION' });
         const header = new Container({ id: 'header' });
         header.append(headerText);
 
