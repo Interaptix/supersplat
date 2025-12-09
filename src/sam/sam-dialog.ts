@@ -579,6 +579,12 @@ class SAMDialog extends Container {
             // Initialize worker if needed
             initWorker();
 
+            // Always ping the worker to update status (worker may already be initialized from previous open)
+            if (worker) {
+                worker.postMessage({ type: 'ping' });
+                updateStatus('Initializing...', true);
+            }
+
             // If a captured image is provided, use it
             if (capturedImage) {
                 image = capturedImage;
