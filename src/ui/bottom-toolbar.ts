@@ -217,7 +217,7 @@ class BottomToolbar extends Container {
         tooltips.register(polygon, localize('tooltip.bottom-toolbar.polygon'));
         tooltips.register(brush, localize('tooltip.bottom-toolbar.brush'));
         tooltips.register(flood, localize('tooltip.bottom-toolbar.flood'));
-        tooltips.register(sam2, 'SAM2 Segmentation');
+        tooltips.register(sam2, localize('tooltip.bottom-toolbar.segmentation'));
         tooltips.register(sphere, localize('tooltip.bottom-toolbar.sphere'));
         tooltips.register(box, localize('tooltip.bottom-toolbar.box'));
         tooltips.register(translate, localize('tooltip.bottom-toolbar.translate'));

@@ -187,11 +187,41 @@ class SAMDialog extends Container {
         dilationRow.append(dilationSlider);
         dilationRow.append(dilationValueLabel);
 
+        // Draw canvas helper function (defined early so it can be used in event handlers)
+        const drawCanvas = () => {
+            const ctx = canvas.getContext('2d')!;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (image) {
+                ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, canvas.width, canvas.height);
+
+                if (mask) {
+                    ctx.globalAlpha = 0.7;
+                    ctx.drawImage(mask, 0, 0, mask.width, mask.height, 0, 0, canvas.width, canvas.height);
+                    ctx.globalAlpha = 1;
+                }
+
+                // Draw points
+                points.forEach((point) => {
+                    const x = (point.x / IMAGE_SIZE.w) * canvas.width;
+                    const y = (point.y / IMAGE_SIZE.h) * canvas.height;
+
+                    ctx.beginPath();
+                    ctx.arc(x, y, 8, 0, 2 * Math.PI);
+                    ctx.fillStyle = point.label === 1 ? '#22c55e' : '#ef4444';
+                    ctx.fill();
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                });
+            }
+        };
+
         // Update dilation when slider changes (with real-time preview)
         dilationSlider.on('change', (value: number) => {
             dilationSize = Math.round(value);
             dilationValueLabel.text = `${dilationSize} px`;
-            
+
             // Apply dilation to preview in real-time
             if (allMasks) {
                 const originalMask = allMasks.canvases[allMasks.selectedIdx];
@@ -291,35 +321,6 @@ class SAMDialog extends Container {
                 });
             } else {
                 maskRow.hidden = true;
-            }
-        };
-
-        const drawCanvas = () => {
-            const ctx = canvas.getContext('2d')!;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            if (image) {
-                ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, canvas.width, canvas.height);
-
-                if (mask) {
-                    ctx.globalAlpha = 0.7;
-                    ctx.drawImage(mask, 0, 0, mask.width, mask.height, 0, 0, canvas.width, canvas.height);
-                    ctx.globalAlpha = 1;
-                }
-
-                // Draw points
-                points.forEach((point) => {
-                    const x = (point.x / IMAGE_SIZE.w) * canvas.width;
-                    const y = (point.y / IMAGE_SIZE.h) * canvas.height;
-
-                    ctx.beginPath();
-                    ctx.arc(x, y, 8, 0, 2 * Math.PI);
-                    ctx.fillStyle = point.label === 1 ? '#22c55e' : '#ef4444';
-                    ctx.fill();
-                    ctx.strokeStyle = '#ffffff';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                });
             }
         };
 

@@ -9,10 +9,10 @@ import { Tensor } from 'onnxruntime-web';
  * Dilate a binary mask to expand its regions.
  * Uses a box kernel for efficient morphological dilation.
  * This expands masked regions by the kernel radius in all directions.
- * 
- * @param canvas - The mask canvas to dilate (uses alpha channel)
- * @param kernelSize - The dilation kernel size in pixels (will be made odd if even)
- * @returns A new canvas with the dilated mask
+ *
+ * @param {HTMLCanvasElement} canvas - The mask canvas to dilate (uses alpha channel)
+ * @param {number} kernelSize - The dilation kernel size in pixels (will be made odd if even)
+ * @returns {HTMLCanvasElement} A new canvas with the dilated mask
  */
 export function dilateMask(canvas: HTMLCanvasElement, kernelSize: number): HTMLCanvasElement {
     if (kernelSize <= 0) {
@@ -56,7 +56,7 @@ export function dilateMask(canvas: HTMLCanvasElement, kernelSize: number): HTMLC
 
     // Efficient separable dilation using two passes (horizontal + vertical)
     // This reduces complexity from O(n * k^2) to O(n * k)
-    
+
     // Intermediate buffer for horizontal pass
     const temp = new Uint8Array(width * height);
 
@@ -98,11 +98,11 @@ export function dilateMask(canvas: HTMLCanvasElement, kernelSize: number): HTMLC
     for (let i = 0; i < width * height; i++) {
         const srcIdx = i * 4;
         const alpha = dilatedAlpha[i];
-        
+
         if (alpha > 0) {
             // Use the same green mask color as float32ArrayToCanvas
             dst[srcIdx] = 0x32;     // R
-            dst[srcIdx + 1] = 0xcd; // G  
+            dst[srcIdx + 1] = 0xcd; // G
             dst[srcIdx + 2] = 0x32; // B
             dst[srcIdx + 3] = 255;  // A
         } else {
