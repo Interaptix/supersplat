@@ -356,6 +356,11 @@ class SAMDialog extends Container {
             workerReady = false;
             pendingAutoEncode = false;
 
+            // Reset dilation slider
+            dilationSize = 0;
+            dilationSlider.value = 0;
+            dilationValueLabel.text = '0 px';
+
             // Reset UI
             updateStatus('Initializing...');
             updatePointsLabel();

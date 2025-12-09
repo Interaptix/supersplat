@@ -174,6 +174,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             // Restore overlays and gizmos
             scene.camera.renderOverlays = true;
             scene.gizmoLayer.enabled = true;
+            // Force a render to show the restored overlays (selection highlighting)
+            scene.forceRender = true;
         }
     });
 
