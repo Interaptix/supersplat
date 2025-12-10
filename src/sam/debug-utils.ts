@@ -7,7 +7,7 @@
 export const SAM2_INPUT_SIZE = 1024;
 
 /** Debug mode flag - set to true to enable console visualizations */
-export let DEBUG_SAM2 = true;
+export let DEBUG_SAM2 = false;
 
 /** Point interface for click coordinates */
 export interface SAM2Point {
