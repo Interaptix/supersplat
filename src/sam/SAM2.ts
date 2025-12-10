@@ -221,8 +221,8 @@ export class SAM2 {
         debugLog('Decoder inputs:', inputs);
 
         // DEBUG: Log detailed tensor stats for comparison (no-op when DEBUG_SAM2 is false)
-        const logTensorStats = DEBUG_SAM2
-            ? (name: string, tensor: ort.Tensor) => {
+        const logTensorStats = DEBUG_SAM2 ?
+            (name: string, tensor: ort.Tensor) => {
                 const data = tensor.data as Float32Array;
                 let min = Infinity, max = -Infinity, sum = 0, sumSq = 0;
                 let zeroCount = 0;
@@ -242,8 +242,8 @@ export class SAM2 {
                 // Log first few values for exact matching
                 const firstFew = Array.from(data.slice(0, 10)).map(v => v.toFixed(6)).join(', ');
                 console.log(`[SAM2 TENSOR] ${name} data[0..9]: [${firstFew}]`);
-            }
-            : () => {};
+            } :
+            () => {};
 
         logTensorStats('image_embed', this.image_encoded.image_embed);
         logTensorStats('point_coords', inputs.point_coords);

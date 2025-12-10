@@ -5,9 +5,9 @@
 
 // Local debug flag for worker context (can't import from debug-utils.ts in worker)
 const DEBUG_SAM2_WORKER = false;
-const debugLog: (...args: unknown[]) => void = DEBUG_SAM2_WORKER
-    ? (...args: unknown[]) => console.log(...args)
-    : () => {};
+const debugLog: (...args: unknown[]) => void = DEBUG_SAM2_WORKER ?
+    (...args: unknown[]) => console.log(...args) :
+    () => {};
 
 debugLog('[SAM2 Worker] Worker script loaded');
 

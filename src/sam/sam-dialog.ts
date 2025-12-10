@@ -7,6 +7,7 @@
 import { Button, Container, Element, Label, SliderInput, Spinner } from '@playcanvas/pcui';
 
 import { Events } from '../events';
+import { debugLog } from './debug-utils';
 import {
     resizeCanvas,
     canvasToFloat32Array,
@@ -14,7 +15,6 @@ import {
     sliceTensor,
     dilateMask
 } from './image-utils';
-import { debugLog } from './debug-utils';
 import { localize } from '../ui/localization';
 
 // Configuration: Set to false for automatic mode (production), true for debug mode (manual controls)
