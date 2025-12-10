@@ -42,6 +42,18 @@ const downloadFile = (arrayBuffer: ArrayBuffer, filename: string) => {
     window.URL.revokeObjectURL(url);
 };
 
+// Interface for captured screen data with camera pose
+interface CapturedScreenData {
+    image: HTMLCanvasElement;
+    cameraPose: {
+        position: { x: number; y: number; z: number };
+        target: { x: number; y: number; z: number };
+    };
+    timestamp: number;
+    canvasWidth: number;
+    canvasHeight: number;
+}
+
 const registerRenderEvents = (scene: Scene, events: Events) => {
     let compressor: PngCompressor;
 
@@ -98,6 +110,39 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             scene.gizmoLayer.enabled = true;
             scene.camera.entity.camera.clearColor.set(0, 0, 0, 0);
         }
+    });
+
+    // Capture screen for SAM2 dialog - captures current viewport with camera pose
+    // Reuses render.offscreen for the actual pixel capture, then converts to canvas
+    events.function('capture.screen', async (): Promise<CapturedScreenData> => {
+        const width = scene.canvas.width;
+        const height = scene.canvas.height;
+
+        // Get camera pose for later restoration (before any state changes)
+        // Use camera.getPose which returns {position, target} format compatible with camera.setPose
+        const cameraPose = events.invoke('camera.getPose');
+
+        // Reuse render.offscreen for pixel capture (handles overlays, render, flip, cleanup)
+        const data = await events.invoke('render.offscreen', width, height) as Uint8Array;
+
+        // Convert Uint8Array to canvas
+        const capturedCanvas = document.createElement('canvas');
+        capturedCanvas.width = width;
+        capturedCanvas.height = height;
+        const ctx = capturedCanvas.getContext('2d')!;
+        const imageData = new ImageData(new Uint8ClampedArray(data), width, height);
+        ctx.putImageData(imageData, 0, 0);
+
+        // Force a render to show restored overlays (selection highlighting)
+        scene.forceRender = true;
+
+        return {
+            image: capturedCanvas,
+            cameraPose,
+            timestamp: Date.now(),
+            canvasWidth: width,
+            canvasHeight: height
+        };
     });
 
     events.function('render.image', async (imageSettings: ImageSettings) => {
@@ -412,4 +457,4 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
     });
 };
 
-export { ImageSettings, VideoSettings, registerRenderEvents };
+export { CapturedScreenData, ImageSettings, VideoSettings, registerRenderEvents };

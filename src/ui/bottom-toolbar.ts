@@ -3,6 +3,7 @@ import { Button, Element, Container } from '@playcanvas/pcui';
 import { Events } from '../events';
 import { localize } from './localization';
 import redoSvg from './svg/redo.svg';
+import sam2Svg from './svg/sam2.svg';
 import brushSvg from './svg/select-brush.svg';
 import floodSvg from './svg/select-flood.svg';
 import lassoSvg from './svg/select-lasso.svg';
@@ -61,6 +62,11 @@ class BottomToolbar extends Container {
 
         const flood = new Button({
             id: 'bottom-toolbar-flood',
+            class: 'bottom-toolbar-tool'
+        });
+
+        const sam2 = new Button({
+            id: 'bottom-toolbar-sam2',
             class: 'bottom-toolbar-tool'
         });
 
@@ -126,6 +132,7 @@ class BottomToolbar extends Container {
         polygon.dom.appendChild(createSvg(polygonSvg));
         brush.dom.appendChild(createSvg(brushSvg));
         flood.dom.appendChild(createSvg(floodSvg));
+        sam2.dom.appendChild(createSvg(sam2Svg));
         sphere.dom.appendChild(createSvg(sphereSvg));
         box.dom.appendChild(createSvg(boxSvg));
         lasso.dom.appendChild(createSvg(lassoSvg));
@@ -139,6 +146,7 @@ class BottomToolbar extends Container {
         this.append(polygon);
         this.append(brush);
         this.append(flood);
+        this.append(sam2);
         this.append(new Element({ class: 'bottom-toolbar-separator' }));
         this.append(sphere);
         this.append(box);
@@ -158,6 +166,10 @@ class BottomToolbar extends Container {
         lasso.dom.addEventListener('click', () => events.fire('tool.lassoSelection'));
         brush.dom.addEventListener('click', () => events.fire('tool.brushSelection'));
         flood.dom.addEventListener('click', () => events.fire('tool.floodSelection'));
+        sam2.dom.addEventListener('click', () => {
+            console.log('SAM2 button clicked! Firing tool.sam2 event...');
+            events.fire('tool.sam2');
+        });
         picker.dom.addEventListener('click', () => events.fire('tool.rectSelection'));
         sphere.dom.addEventListener('click', () => events.fire('tool.sphereSelection'));
         box.dom.addEventListener('click', () => events.fire('tool.boxSelection'));
@@ -205,6 +217,7 @@ class BottomToolbar extends Container {
         tooltips.register(polygon, localize('tooltip.bottom-toolbar.polygon'));
         tooltips.register(brush, localize('tooltip.bottom-toolbar.brush'));
         tooltips.register(flood, localize('tooltip.bottom-toolbar.flood'));
+        tooltips.register(sam2, localize('tooltip.bottom-toolbar.segmentation'));
         tooltips.register(sphere, localize('tooltip.bottom-toolbar.sphere'));
         tooltips.register(box, localize('tooltip.bottom-toolbar.box'));
         tooltips.register(translate, localize('tooltip.bottom-toolbar.translate'));

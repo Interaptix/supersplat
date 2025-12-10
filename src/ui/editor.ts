@@ -24,6 +24,7 @@ import { VideoSettingsDialog } from './video-settings-dialog';
 import { ViewCube } from './view-cube';
 import { ViewPanel } from './view-panel';
 import { version } from '../../package.json';
+import { SAMDialog } from '../sam/sam-dialog';
 
 // ts compiler and vscode find this type, but eslint does not
 type FilePickerAcceptType = unknown;
@@ -179,11 +180,15 @@ class EditorUI {
         // video settings
         const videoSettingsDialog = new VideoSettingsDialog(events);
 
+        // SAM2 dialog
+        const samDialog = new SAMDialog(events);
+
         topContainer.append(popup);
         topContainer.append(exportPopup);
         topContainer.append(publishSettingsDialog);
         topContainer.append(imageSettingsDialog);
         topContainer.append(videoSettingsDialog);
+        topContainer.append(samDialog);
 
         appContainer.append(editorContainer);
         appContainer.append(topContainer);
@@ -358,6 +363,81 @@ class EditorUI {
 
         events.on('progressEnd', () => {
             progress.hidden = true;
+        });
+
+        // SAM2 tool event
+        events.on('tool.sam2', async () => {
+            console.log('SAM2 tool event fired!');
+            const result = await samDialog.show();
+            if (result) {
+                console.log('[SAM2] Selection result received:', result);
+
+                // Restore the camera pose to match the captured screenshot
+                const { cameraPose, mask, originalWidth, originalHeight } = result;
+                events.fire('camera.setPose', cameraPose);
+
+                // SAM processes images at 1024x1024 and pads non-square images to square
+                // We need to transform the mask from SAM's padded 1024x1024 space to screen coordinates
+                const SAM_IMAGE_SIZE = 1024;
+
+                // Calculate padding that was applied to make the original image square
+                const largestDim = Math.max(originalWidth, originalHeight);
+                const padX = (largestDim - originalWidth) / 2;
+                const padY = (largestDim - originalHeight) / 2;
+
+                // Create a canvas at screen resolution and transform the mask
+                const screenMaskCanvas = document.createElement('canvas');
+                screenMaskCanvas.width = originalWidth;
+                screenMaskCanvas.height = originalHeight;
+                const ctx = screenMaskCanvas.getContext('2d')!;
+
+                // The mask is 1024x1024 but the actual image content is centered within it
+                // We need to extract just the portion that corresponds to the original image
+                // Scale factor from SAM space to original square space
+                const scale = SAM_IMAGE_SIZE / largestDim;
+
+                // Source rectangle in SAM 1024x1024 space (where the actual image content is)
+                const srcX = padX * scale;
+                const srcY = padY * scale;
+                const srcW = originalWidth * scale;
+                const srcH = originalHeight * scale;
+
+                // Draw the relevant portion of the mask to screen size
+                ctx.drawImage(
+                    mask,
+                    srcX, srcY, srcW, srcH,  // Source: portion of 1024x1024 mask that contains actual image
+                    0, 0, originalWidth, originalHeight  // Dest: full screen canvas
+                );
+
+                // Convert mask format: SAM uses red=50 (0x32) for green visualization,
+                // but select.byMask expects red=255 for selection detection
+                const imageData = ctx.getImageData(0, 0, screenMaskCanvas.width, screenMaskCanvas.height);
+                for (let i = 0; i < imageData.data.length; i += 4) {
+                    if (imageData.data[i + 3] > 0) {  // If alpha > 0 (masked pixel)
+                        imageData.data[i] = 255;       // Set red to 255
+                    }
+                }
+                ctx.putImageData(imageData, 0, 0);
+
+                console.log('[SAM2] Mask transformed to screen coordinates:', {
+                    originalWidth,
+                    originalHeight,
+                    largestDim,
+                    padX,
+                    padY,
+                    scale,
+                    srcX,
+                    srcY,
+                    srcW,
+                    srcH
+                });
+
+                // Fire the select.byMask event with the transformed mask
+                // The selection system expects: op ('set', 'add', 'remove'), canvas, context
+                events.fire('select.byMask', result.operation, screenMaskCanvas, ctx);
+
+                console.log('[SAM2] select.byMask event fired');
+            }
         });
 
         // initialize canvas to correct size before creating graphics device etc
