@@ -5,6 +5,8 @@
 
 import { Tensor } from 'onnxruntime-web';
 
+import { debugLog } from './debug-utils';
+
 /**
  * Dilate a binary mask to expand its regions.
  * Uses a box kernel for efficient morphological dilation.
@@ -185,7 +187,7 @@ export function resizeCanvas(canvasOrig: HTMLCanvasElement, size: Size): HTMLCan
 
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'low';
-    console.log(`[SAM2] resizeCanvas smoothing: ${ctx.imageSmoothingEnabled}, quality: ${ctx.imageSmoothingQuality}`);
+    debugLog(`[SAM2] resizeCanvas smoothing: ${ctx.imageSmoothingEnabled}, quality: ${ctx.imageSmoothingQuality}`);
 
     ctx.drawImage(
         canvasOrig,

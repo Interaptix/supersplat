@@ -14,6 +14,7 @@ import {
     sliceTensor,
     dilateMask
 } from './image-utils';
+import { debugLog } from './debug-utils';
 import { localize } from '../ui/localization';
 
 // Configuration: Set to false for automatic mode (production), true for debug mode (manual controls)
@@ -443,7 +444,7 @@ class SAMDialog extends Container {
                     imageEncoded = false;
                     drawCanvas();
 
-                    console.log('[SAM2] Auto-captured screen with camera pose:', capturedCameraPose);
+                    debugLog('[SAM2] Auto-captured screen with camera pose:', capturedCameraPose);
 
                     // In automatic mode, either encode immediately if worker ready, or set pending flag
                     if (workerReady) {
@@ -699,7 +700,7 @@ class SAMDialog extends Container {
                     imageEncoded = false;
                     drawCanvas();
 
-                    console.log('[SAM2] Screen captured with camera pose:', capturedCameraPose);
+                    debugLog('[SAM2] Screen captured with camera pose:', capturedCameraPose);
                     updateStatus('Ready. Encode image to start.');
                     encodeButton.enabled = true;
                 } else {
@@ -730,9 +731,9 @@ class SAMDialog extends Container {
 
         // Public methods
         this.show = (capturedImage?: HTMLCanvasElement) => {
-            console.log('SAMDialog.show() called, setting hidden = false');
+            debugLog('SAMDialog.show() called, setting hidden = false');
             this.hidden = false;
-            console.log('SAMDialog hidden state:', this.hidden, 'DOM display:', window.getComputedStyle(this.dom).display);
+            debugLog('SAMDialog hidden state:', this.hidden, 'DOM display:', window.getComputedStyle(this.dom).display);
             document.addEventListener('keydown', keydown);
             this.dom.focus();
 

@@ -5,7 +5,8 @@ import {
     visualizeModelOutput,
     visualizeDecoderInput,
     extractBestMask,
-    DEBUG_SAM2
+    DEBUG_SAM2,
+    debugLog
 } from './debug-utils';
 
 const ENCODER_URL =
@@ -179,7 +180,7 @@ export class SAM2 {
             return point.label;
         });
 
-        console.log({
+        debugLog({
             flatPoints,
             flatLabels,
             masks
@@ -217,30 +218,32 @@ export class SAM2 {
             has_mask_input: has_mask_input
         };
 
-        console.log('Decoder inputs:', inputs);
+        debugLog('Decoder inputs:', inputs);
 
-        // DEBUG: Log detailed tensor stats for comparison
-        const logTensorStats = (name: string, tensor: ort.Tensor) => {
-            const data = tensor.data as Float32Array;
-            let min = Infinity, max = -Infinity, sum = 0, sumSq = 0;
-            let zeroCount = 0;
-            for (let i = 0; i < data.length; i++) {
-                const v = data[i];
-                if (v < min) min = v;
-                if (v > max) max = v;
-                sum += v;
-                sumSq += v * v;
-                if (v === 0) zeroCount++;
+        // DEBUG: Log detailed tensor stats for comparison (no-op when DEBUG_SAM2 is false)
+        const logTensorStats = DEBUG_SAM2
+            ? (name: string, tensor: ort.Tensor) => {
+                const data = tensor.data as Float32Array;
+                let min = Infinity, max = -Infinity, sum = 0, sumSq = 0;
+                let zeroCount = 0;
+                for (let i = 0; i < data.length; i++) {
+                    const v = data[i];
+                    if (v < min) min = v;
+                    if (v > max) max = v;
+                    sum += v;
+                    sumSq += v * v;
+                    if (v === 0) zeroCount++;
+                }
+                const mean = sum / data.length;
+                const variance = (sumSq / data.length) - (mean * mean);
+                const std = Math.sqrt(Math.max(0, variance));
+                console.log(`[SAM2 TENSOR] ${name}: shape=[${tensor.dims.join(',')}], min=${min.toFixed(6)}, max=${max.toFixed(6)}, mean=${mean.toFixed(6)}, std=${std.toFixed(6)}, zeros=${zeroCount}/${data.length}`);
+
+                // Log first few values for exact matching
+                const firstFew = Array.from(data.slice(0, 10)).map(v => v.toFixed(6)).join(', ');
+                console.log(`[SAM2 TENSOR] ${name} data[0..9]: [${firstFew}]`);
             }
-            const mean = sum / data.length;
-            const variance = (sumSq / data.length) - (mean * mean);
-            const std = Math.sqrt(Math.max(0, variance));
-            console.log(`[SAM2 TENSOR] ${name}: shape=[${tensor.dims.join(',')}], min=${min.toFixed(6)}, max=${max.toFixed(6)}, mean=${mean.toFixed(6)}, std=${std.toFixed(6)}, zeros=${zeroCount}/${data.length}`);
-
-            // Log first few values for exact matching
-            const firstFew = Array.from(data.slice(0, 10)).map(v => v.toFixed(6)).join(', ');
-            console.log(`[SAM2 TENSOR] ${name} data[0..9]: [${firstFew}]`);
-        };
+            : () => {};
 
         logTensorStats('image_embed', this.image_encoded.image_embed);
         logTensorStats('point_coords', inputs.point_coords);

@@ -9,6 +9,14 @@ export const SAM2_INPUT_SIZE = 1024;
 /** Debug mode flag - set to true to enable console visualizations */
 export let DEBUG_SAM2 = false;
 
+/**
+ * Conditional debug log - only logs when DEBUG_SAM2 is true.
+ * Use this for SAM2-related debug messages throughout the codebase.
+ */
+export const debugLog: (...args: unknown[]) => void = DEBUG_SAM2
+    ? (...args: unknown[]) => console.log(...args)
+    : () => {};
+
 /** Point interface for click coordinates */
 export interface SAM2Point {
     x: number;

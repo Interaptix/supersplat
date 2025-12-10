@@ -3,7 +3,13 @@
  * Handles SAM2 model loading and inference in a background thread.
  */
 
-console.log('[SAM2 Worker] Worker script loaded');
+// Local debug flag for worker context (can't import from debug-utils.ts in worker)
+const DEBUG_SAM2_WORKER = false;
+const debugLog: (...args: unknown[]) => void = DEBUG_SAM2_WORKER
+    ? (...args: unknown[]) => console.log(...args)
+    : () => {};
+
+debugLog('[SAM2 Worker] Worker script loaded');
 
 import * as ort from 'onnxruntime-web';
 
@@ -15,7 +21,7 @@ declare const self: typeof globalThis & {
     onmessage: ((e: MessageEvent) => void) | null;
 };
 
-console.log('[SAM2 Worker] Imports complete, setting up message handler');
+debugLog('[SAM2 Worker] Imports complete, setting up message handler');
 
 // SAM2 instance
 const sam = new SAM2();
@@ -115,7 +121,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
         const durationMs = performance.now() - startTime;
         stats.decodeTimes.push(durationMs);
 
-        console.log('Decoding results:', decodingResults);
+        debugLog('Decoding results:', decodingResults);
 
         // Convert tensors to transferable format
         const serializedResults: Record<string, { data: Float32Array; dims: readonly number[] }> = {};
