@@ -113,70 +113,36 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
     });
 
     // Capture screen for SAM2 dialog - captures current viewport with camera pose
-    // Uses PlayCanvas render target buffer for clean capture without UI overlays
+    // Reuses render.offscreen for the actual pixel capture, then converts to canvas
     events.function('capture.screen', async (): Promise<CapturedScreenData> => {
-        try {
-            // Get the current canvas dimensions
-            const width = scene.canvas.width;
-            const height = scene.canvas.height;
+        const width = scene.canvas.width;
+        const height = scene.canvas.height;
 
-            // Get camera pose for later restoration (before any state changes)
-            // Use camera.getPose which returns {position, target} format compatible with camera.setPose
-            const cameraPose = events.invoke('camera.getPose');
+        // Get camera pose for later restoration (before any state changes)
+        // Use camera.getPose which returns {position, target} format compatible with camera.setPose
+        const cameraPose = events.invoke('camera.getPose');
 
-            // Temporarily disable overlays and gizmos for clean capture
-            scene.camera.renderOverlays = false;
-            scene.gizmoLayer.enabled = false;
+        // Reuse render.offscreen for pixel capture (handles overlays, render, flip, cleanup)
+        const data = await events.invoke('render.offscreen', width, height) as Uint8Array;
 
-            // Force a render to ensure we have the latest frame without overlays
-            scene.forceRender = true;
-            await postRender();
+        // Convert Uint8Array to canvas
+        const capturedCanvas = document.createElement('canvas');
+        capturedCanvas.width = width;
+        capturedCanvas.height = height;
+        const ctx = capturedCanvas.getContext('2d')!;
+        const imageData = new ImageData(new Uint8ClampedArray(data), width, height);
+        ctx.putImageData(imageData, 0, 0);
 
-            // CPU-side buffer to read pixels into
-            const data = new Uint8Array(width * height * 4);
+        // Force a render to show restored overlays (selection highlighting)
+        scene.forceRender = true;
 
-            // Read from PlayCanvas render target buffer (clean, no UI overlays)
-            const { renderTarget } = scene.camera.entity.camera;
-            const { workRenderTarget } = scene.camera;
-
-            scene.dataProcessor.copyRt(renderTarget, workRenderTarget);
-            await workRenderTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workRenderTarget, data });
-
-            // Flip Y positions (GPU render target has Y=0 at bottom, canvas has Y=0 at top)
-            const line = new Uint8Array(width * 4);
-            for (let y = 0; y < height / 2; y++) {
-                const top = y * width * 4;
-                const bottom = (height - y - 1) * width * 4;
-                line.set(data.subarray(top, top + width * 4));
-                data.copyWithin(top, bottom, bottom + width * 4);
-                data.set(line, bottom);
-            }
-
-            // Convert to canvas
-            const capturedCanvas = document.createElement('canvas');
-            capturedCanvas.width = width;
-            capturedCanvas.height = height;
-            const ctx = capturedCanvas.getContext('2d')!;
-            const imageData = new ImageData(new Uint8ClampedArray(data.buffer), width, height);
-            ctx.putImageData(imageData, 0, 0);
-
-            return {
-                image: capturedCanvas,
-                cameraPose,
-                timestamp: Date.now(),
-                canvasWidth: width,
-                canvasHeight: height
-            };
-        } catch (error) {
-            console.error('[capture.screen] Error capturing screen:', error);
-            throw error;
-        } finally {
-            // Restore overlays and gizmos
-            scene.camera.renderOverlays = true;
-            scene.gizmoLayer.enabled = true;
-            // Force a render to show the restored overlays (selection highlighting)
-            scene.forceRender = true;
-        }
+        return {
+            image: capturedCanvas,
+            cameraPose,
+            timestamp: Date.now(),
+            canvasWidth: width,
+            canvasHeight: height
+        };
     });
 
     events.function('render.image', async (imageSettings: ImageSettings) => {
