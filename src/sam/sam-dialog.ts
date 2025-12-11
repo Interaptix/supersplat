@@ -103,8 +103,54 @@ class SAMDialog extends Container {
 
         // Header
         const headerText = new Label({ id: 'text', text: 'SEGMENTATION' });
+
+        // Expand/collapse button
+        const expandButton = document.createElement('button');
+        expandButton.className = 'sam-expand-button';
+        expandButton.title = 'Expand dialog';
+
+        // SVG icons for expand and collapse
+        const expandIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <polyline points="9 21 3 21 3 15"></polyline>
+            <line x1="21" y1="3" x2="14" y2="10"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+        </svg>`;
+        const collapseIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 14 10 14 10 20"></polyline>
+            <polyline points="20 10 14 10 14 4"></polyline>
+            <line x1="14" y1="10" x2="21" y2="3"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+        </svg>`;
+
+        let isExpanded = false;
+        expandButton.innerHTML = expandIcon;
+
+        // Toggle expand/collapse
+        expandButton.addEventListener('click', () => {
+            isExpanded = !isExpanded;
+            if (isExpanded) {
+                this.dom.classList.add('expanded');
+                expandButton.innerHTML = collapseIcon;
+                expandButton.title = 'Collapse dialog';
+            } else {
+                this.dom.classList.remove('expanded');
+                expandButton.innerHTML = expandIcon;
+                expandButton.title = 'Expand dialog';
+            }
+        });
+
+        // Helper to reset expand state
+        const resetExpandState = () => {
+            isExpanded = false;
+            this.dom.classList.remove('expanded');
+            expandButton.innerHTML = expandIcon;
+            expandButton.title = 'Expand dialog';
+        };
+
         const header = new Container({ id: 'header' });
         header.append(headerText);
+        header.dom.appendChild(expandButton);
 
         // Status row
         const statusRow = new Container({ class: 'sam-status-row' });
@@ -119,8 +165,10 @@ class SAMDialog extends Container {
         // Canvas container
         const canvasContainer = new Container({ class: 'sam-canvas-container' });
         const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 512;
+        // Use larger buffer for better quality on bigger displays
+        // CSS will scale the display size responsively
+        canvas.width = 600;
+        canvas.height = 600;
         canvas.className = 'sam-canvas';
         canvasContainer.dom.appendChild(canvas);
 
@@ -557,10 +605,12 @@ class SAMDialog extends Container {
 
             event.preventDefault();
 
+            // Use getBoundingClientRect for displayed size (CSS may scale the canvas)
             const rect = canvas.getBoundingClientRect();
             const point: SAM2Point = {
-                x: ((event.clientX - rect.left) / canvas.width) * IMAGE_SIZE.w,
-                y: ((event.clientY - rect.top) / canvas.height) * IMAGE_SIZE.h,
+                // Use rect.width/height (displayed size) not canvas.width/height (buffer size)
+                x: ((event.clientX - rect.left) / rect.width) * IMAGE_SIZE.w,
+                y: ((event.clientY - rect.top) / rect.height) * IMAGE_SIZE.h,
                 label: event.button === 0 ? 1 : 0
             };
 
@@ -802,6 +852,7 @@ class SAMDialog extends Container {
         };
 
         this.hide = () => {
+            resetExpandState();
             this.hidden = true;
         };
 
